@@ -1,0 +1,81 @@
+# Contributing a chapter
+
+Vibe Magazine chapters are **self-contained interactive artworks**. Contributors add a folder via GitHub pull request. The site shell (home, volume pages, prev/next chrome) is maintained by editors — you only touch your chapter directory.
+
+## Quick start
+
+1. Copy the template:
+
+```bash
+cp -R content/_templates/chapter \
+  content/volumes/vol-05-nike/chapters/ch-04-my-piece
+```
+
+2. Edit `meta.yaml`:
+   - `order` — chapter number (unique within the volume)
+   - `slug` — URL-safe kebab-case
+   - `title`, `author`, `summary`, `thumb`
+   - Folder name should match `ch-{order}-{slug}`
+
+3. Replace `index.html` (and assets) with your artwork.
+4. Replace `thumb.svg` / `thumb.jpg` (portrait ~3:4 works best).
+5. Open a PR that only includes your chapter folder (unless an editor asked you to change volume metadata).
+
+## Chapter contract
+
+Required files inside `content/volumes/<volume>/chapters/<chapter>/`:
+
+| File | Purpose |
+|------|---------|
+| `meta.yaml` | Listing + chrome metadata |
+| `index.html` | Entrypoint loaded in an iframe |
+| thumb file referenced by `meta.yaml` | Volume grid thumbnail |
+
+`meta.yaml` fields:
+
+```yaml
+id: ch-04-my-piece
+order: 4
+slug: my-piece
+title: My Piece
+author: your-handle   # @ is optional; UI adds it
+summary: |
+  Short description for the volume page and prev/next labels.
+thumb: thumb.svg
+```
+
+URL shape (generated automatically):
+
+`/vol/{volumeNumber}-{volumeSlug}/ch/{order}-{slug}`
+
+## Hard rules
+
+1. **Local assets only** — images, fonts, scripts, and data must live in your chapter folder. No CDN, no remote fonts, no `fetch` to the internet.
+2. **Ship built output** — PR the finished `index.html` + assets. CI does not build chapter toolchains for you.
+3. **Sandbox** — chapters run in `<iframe sandbox="allow-scripts">` (no `allow-same-origin`). That means:
+   - `localStorage` / cookies are unavailable
+   - you cannot access the parent page
+   - keep state in memory
+4. **Do not edit the shell header** — prev / logo / next is owned by the site. Your page should assume a small top overlay.
+5. **Volumes are editor-owned** — do not add `volume.yaml` / new volumes unless you are coordinating with an editor.
+
+## Local preview
+
+```bash
+npm install
+npm run dev
+```
+
+- Volume page: `/vol/5-nike`
+- Your chapter: `/vol/5-nike/ch/{order}-{slug}`
+- Raw iframe document: `/chapters/5-nike/{order}-{slug}/index.html`
+
+Chapter files under `content/volumes` are synced into `public/chapters` when Astro starts or builds.
+
+## Review checklist
+
+- [ ] `meta.yaml` + `index.html` + thumb present
+- [ ] Relative asset paths only
+- [ ] Works with keyboard / pointer where interaction matters
+- [ ] No reliance on `localStorage`
+- [ ] PR scope limited to your chapter folder

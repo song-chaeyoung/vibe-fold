@@ -1,0 +1,126 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SiteHeader from '../../../components/SiteHeader.astro';
+import ChapterRow from '../../../components/ChapterRow.astro';
+import {
+	formatVolLabel,
+	getAllVolumes,
+	getVolumeByVolId,
+} from '../../../lib/content';
+
+export function getStaticPaths() {
+	return getAllVolumes()
+		.filter((volume) => volume.status === 'published')
+		.map((volume) => ({
+			params: { volId: volume.volId },
+		}));
+}
+
+const { volId } = Astro.params;
+const volume = getVolumeByVolId(volId!);
+
+if (!volume) {
+	throw new Error(`Volume not found: ${volId}`);
+}
+
+const summaryParagraphs = volume.summary.split(/\n\n+/).filter(Boolean);
+---
+
+<BaseLayout
+	title={`${formatVolLabel(volume.number)} ${volume.title} · Vibe Magazine`}
+	description={volume.summary}
+	bodyClass="page-volume"
+>
+	<div class="volume-page">
+		<section class="volume-intro">
+			<div class="volume-intro__stack">
+				<SiteHeader />
+				<div class="volume-intro__copy">
+					<p class="volume-intro__vol">{formatVolLabel(volume.number)}</p>
+					<h1 class="volume-intro__title">{volume.title}</h1>
+					<div class="volume-intro__summary">
+						{summaryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="chapter-grid" aria-label="Chapters">
+			{
+				volume.chapters.length === 0 ? (
+					<p class="chapter-grid__empty">No chapters yet.</p>
+				) : (
+					volume.chapters.map((chapter) => <ChapterRow volume={volume} chapter={chapter} />)
+				)
+			}
+		</section>
+	</div>
+</BaseLayout>
+
+<style>
+	.volume-page {
+		padding: var(--space-hero-y) var(--page-pad) 5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 3.875rem;
+		background: #fff;
+	}
+
+	.volume-intro__stack {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-height: var(--hero-row-h);
+		gap: 2rem;
+	}
+
+	.volume-intro__copy {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.volume-intro__vol {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		color: var(--color-muted);
+	}
+
+	.volume-intro__title {
+		font-size: var(--text-display);
+		font-weight: 700;
+		line-height: var(--lh-display);
+	}
+
+	.volume-intro__summary {
+		display: grid;
+		gap: 1em;
+		max-width: 64rem;
+		font-size: var(--text-body);
+		font-weight: 400;
+		line-height: var(--lh-body);
+		white-space: pre-wrap;
+	}
+
+	.chapter-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 3rem;
+	}
+
+	.chapter-grid__empty {
+		grid-column: 1 / -1;
+		color: #666;
+	}
+
+	@media (max-width: 1000px) {
+		.chapter-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.volume-intro__stack {
+			min-height: 0;
+		}
+	}
+</style>

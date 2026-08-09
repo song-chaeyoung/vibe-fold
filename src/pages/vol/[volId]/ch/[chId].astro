@@ -1,0 +1,71 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import ChapterChrome from '../../../../components/ChapterChrome.astro';
+import {
+	formatChapterLabel,
+	formatVolLabel,
+	getAdjacentChapters,
+	getAllVolumes,
+	getVolumeByVolId,
+} from '../../../../lib/content';
+
+export function getStaticPaths() {
+	return getAllVolumes()
+		.filter((volume) => volume.status === 'published')
+		.flatMap((volume) =>
+			volume.chapters.map((chapter) => ({
+				params: { volId: volume.volId, chId: chapter.chId },
+			})),
+		);
+}
+
+const { volId, chId } = Astro.params;
+const volume = getVolumeByVolId(volId!);
+
+if (!volume) {
+	throw new Error(`Volume not found: ${volId}`);
+}
+
+const { current, prev, next } = getAdjacentChapters(volume, chId!);
+
+if (!current) {
+	throw new Error(`Chapter not found: ${volId}/${chId}`);
+}
+
+const pageTitle = `${formatChapterLabel(current.order, current.title)} · ${formatVolLabel(volume.number)} ${volume.title}`;
+---
+
+<BaseLayout title={`${pageTitle} · Vibe Magazine`} description={current.summary} bodyClass="page-chapter">
+	<ChapterChrome volume={volume} prev={prev} next={next} />
+
+	<main class="chapter-stage">
+		<iframe
+			class="chapter-stage__frame"
+			src={current.iframeSrc}
+			title={formatChapterLabel(current.order, current.title)}
+			sandbox="allow-scripts"
+			loading="eager"
+		></iframe>
+	</main>
+</BaseLayout>
+
+<style>
+	:global(body.page-chapter) {
+		overflow: hidden;
+		background: #000;
+	}
+
+	.chapter-stage {
+		position: fixed;
+		inset: 0;
+		background: #000;
+	}
+
+	.chapter-stage__frame {
+		display: block;
+		width: 100%;
+		height: 100%;
+		border: 0;
+		background: #000;
+	}
+</style>

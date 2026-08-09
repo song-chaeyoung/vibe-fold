@@ -1,0 +1,98 @@
+---
+import type { Chapter, Volume } from '../lib/content';
+import { chapterHref, formatChapterLabel } from '../lib/content';
+
+interface Props {
+	volume: Volume;
+	chapter: Chapter;
+}
+
+const { volume, chapter } = Astro.props;
+const href = chapterHref(volume.volId, chapter.chId);
+const author = chapter.author.startsWith('@') ? chapter.author : `@${chapter.author}`;
+const summaryParagraphs = chapter.summary.split(/\n\n+/).filter(Boolean);
+---
+
+<a class="chapter-row" href={href}>
+	<div class="chapter-row__media">
+		<img src={chapter.thumbSrc} alt="" loading="lazy" />
+	</div>
+	<div class="chapter-row__body">
+		<h2 class="chapter-row__title">{formatChapterLabel(chapter.order, chapter.title)}</h2>
+		<p class="chapter-row__author">{author}</p>
+		<div class="chapter-row__summary">
+			{summaryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+		</div>
+	</div>
+</a>
+
+<style>
+	.chapter-row {
+		display: flex;
+		gap: 1.5rem;
+		align-items: flex-start;
+		min-width: 0;
+		color: inherit;
+	}
+
+	.chapter-row:hover .chapter-row__media {
+		transform: translateY(-2px);
+	}
+
+	.chapter-row__media {
+		flex: 0 0 var(--card-w);
+		width: var(--card-w);
+		aspect-ratio: 297 / 420;
+		overflow: hidden;
+		background: var(--color-soon-bg);
+		box-shadow: var(--shadow-card);
+		transition: transform 0.2s ease;
+	}
+
+	.chapter-row__media img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.chapter-row__body {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.chapter-row__title {
+		font-size: var(--text-heading);
+		font-weight: 700;
+		line-height: var(--lh-tight);
+	}
+
+	.chapter-row__author {
+		font-size: var(--text-body);
+		font-weight: 400;
+		line-height: var(--lh-body);
+		color: var(--color-muted);
+	}
+
+	.chapter-row__summary {
+		display: grid;
+		gap: 1em;
+		font-size: var(--text-body);
+		line-height: var(--lh-body);
+		font-weight: 400;
+		white-space: pre-wrap;
+	}
+
+	@media (max-width: 720px) {
+		.chapter-row {
+			flex-direction: column;
+		}
+
+		.chapter-row__media {
+			flex-basis: auto;
+			max-width: 14rem;
+		}
+	}
+</style>

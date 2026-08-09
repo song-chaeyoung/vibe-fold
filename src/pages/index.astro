@@ -1,0 +1,264 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import VolumeCard from '../components/VolumeCard.astro';
+import {
+	formatVolLabel,
+	getAllVolumes,
+	getFeaturedVolume,
+	volumeHref,
+} from '../lib/content';
+
+const volumes = getAllVolumes();
+const featured = getFeaturedVolume();
+const summaryParagraphs = featured?.summary.split(/\n\n+/).filter(Boolean) ?? [];
+---
+
+<BaseLayout title="Vibe Magazine" bodyClass="page-home">
+	<div class="home">
+		{
+			featured && (
+				<div class="home__atmosphere" aria-hidden="true">
+					<img class="home__atmosphere-image" src={featured.coverSrc} alt="" />
+					<div class="home__atmosphere-frost" />
+					<div class="home__atmosphere-mist home__atmosphere-mist--x" />
+					<div class="home__atmosphere-mist home__atmosphere-mist--y" />
+					<div class="home__atmosphere-fade" />
+				</div>
+			)
+		}
+
+		<section class="hero" aria-label="Featured volume">
+			{
+				featured ? (
+					<div class="hero__row">
+						<div class="hero__main">
+							<SiteHeader />
+							<div class="hero__copy">
+								<p class="hero__vol">{formatVolLabel(featured.number)}</p>
+								<h1 class="hero__title">
+									<a href={volumeHref(featured.volId)}>{featured.title}</a>
+								</h1>
+								<div class="hero__summary">
+									{summaryParagraphs.map((paragraph) => (
+										<p>{paragraph}</p>
+									))}
+								</div>
+							</div>
+						</div>
+						<a
+							class="hero__cover"
+							href={volumeHref(featured.volId)}
+							aria-label={`Open ${featured.title}`}
+						>
+							<img src={featured.coverSrc} alt="" />
+						</a>
+					</div>
+				) : (
+					<div class="hero__empty">
+						<SiteHeader />
+						<p>No featured volume yet.</p>
+					</div>
+				)
+			}
+		</section>
+
+		<section class="archive" aria-label="All volumes">
+			<div class="archive__grid">
+				{volumes.map((volume) => <VolumeCard volume={volume} />)}
+			</div>
+		</section>
+	</div>
+</BaseLayout>
+
+<style>
+	/* One continuous white page — atmosphere is only a top wash, not a section box */
+	.home {
+		position: relative;
+		min-height: 100vh;
+		background: #fff;
+	}
+
+	.home__atmosphere {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: clamp(28rem, 52vw, 36.25rem);
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.home__atmosphere-image {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 270%;
+		object-fit: cover;
+		object-position: center top;
+		filter: blur(2px);
+	}
+
+	.home__atmosphere-frost {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 30%;
+		backdrop-filter: blur(19.55px);
+		background: rgba(0, 0, 0, 0.01);
+	}
+
+	.home__atmosphere-mist {
+		position: absolute;
+		inset: 0;
+		background: #fff;
+		mask-size: 100% 100%;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		-webkit-mask-repeat: no-repeat;
+	}
+
+	.home__atmosphere-mist--x {
+		opacity: 0.92;
+		mask-image: url('/brand/hero-gradient-a.png');
+		-webkit-mask-image: url('/brand/hero-gradient-a.png');
+	}
+
+	.home__atmosphere-mist--y {
+		opacity: 1;
+		mask-image: url('/brand/hero-gradient-b.png');
+		-webkit-mask-image: url('/brand/hero-gradient-b.png');
+	}
+
+	/* dissolve atmosphere into the page white — no section edge */
+	.home__atmosphere-fade {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 55%;
+		background: linear-gradient(
+			to bottom,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0.55) 35%,
+			#fff 78%,
+			#fff 100%
+		);
+	}
+
+	.hero,
+	.archive {
+		position: relative;
+		z-index: 1;
+		background: transparent;
+	}
+
+	.hero {
+		padding: var(--space-hero-y) var(--page-pad) 0;
+	}
+
+	.hero__row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--cover-w);
+		column-gap: clamp(2rem, 5vw, 6rem);
+		align-items: stretch;
+		min-height: var(--hero-row-h);
+	}
+
+	.hero__main {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-width: 0;
+		min-height: var(--hero-row-h);
+		gap: 2rem;
+	}
+
+	.hero__copy {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		max-width: 52rem;
+	}
+
+	.hero__vol {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		color: var(--color-muted);
+	}
+
+	.hero__title {
+		font-size: var(--text-display);
+		font-weight: 700;
+		line-height: var(--lh-display);
+	}
+
+	.hero__summary {
+		display: grid;
+		gap: 1em;
+		font-size: var(--text-body);
+		font-weight: 400;
+		line-height: var(--lh-body);
+	}
+
+	.hero__cover {
+		display: block;
+		width: var(--cover-w);
+		max-width: 100%;
+		justify-self: end;
+		align-self: start;
+		box-shadow: var(--shadow-cover);
+		background: #111;
+		transition: transform 0.25s ease;
+	}
+
+	.hero__cover:hover {
+		transform: translateY(-4px);
+	}
+
+	.hero__cover img {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 297 / 420;
+		object-fit: cover;
+	}
+
+	.hero__empty {
+		display: grid;
+		gap: 2rem;
+		min-height: var(--hero-row-h);
+	}
+
+	.archive {
+		padding: var(--space-archive-y) var(--page-pad);
+	}
+
+	.archive__grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.5rem;
+		align-items: flex-start;
+	}
+
+	@media (max-width: 900px) {
+		.hero__row {
+			grid-template-columns: 1fr;
+			min-height: 0;
+			row-gap: 2rem;
+		}
+
+		.hero__main {
+			min-height: 0;
+		}
+
+		.hero__cover {
+			justify-self: start;
+			width: min(var(--cover-w), 14rem);
+		}
+	}
+</style>

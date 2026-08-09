@@ -1,0 +1,8 @@
+id: ch-03-sprint
+order: 3
+slug: sprint
+title: Sprint
+author: Nova
+summary: |
+  Hold space (or tap) to sprint. A minimal runner loop about pace, breath, and finishing the lap you started.
+thumb: thumb.svg

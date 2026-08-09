@@ -1,0 +1,93 @@
+---
+import type { Volume } from '../lib/content';
+import { formatVolLabel, volumeHref } from '../lib/content';
+
+interface Props {
+	volume: Volume;
+}
+
+const { volume } = Astro.props;
+const isComingSoon = volume.status === 'coming_soon';
+const label = `${formatVolLabel(volume.number)} ${volume.title}`;
+---
+
+{
+	isComingSoon ? (
+		<article class="volume-card volume-card--soon" aria-label={`${label}, Coming Soon`}>
+			<div class="volume-card__media volume-card__media--soon">
+				<span>Coming Soon</span>
+			</div>
+			<p class="volume-card__title">{label}</p>
+			<p class="volume-card__date">{volume.date}</p>
+		</article>
+	) : (
+		<a class="volume-card" href={volumeHref(volume.volId)}>
+			<div class="volume-card__media">
+				<img src={volume.coverSrc} alt="" loading="lazy" />
+			</div>
+			<p class="volume-card__title">{label}</p>
+			<p class="volume-card__date">{volume.date}</p>
+		</a>
+	)
+}
+
+<style>
+	.volume-card {
+		display: flex;
+		flex: 0 0 var(--card-w);
+		flex-direction: column;
+		gap: 0.5rem;
+		width: var(--card-w);
+		max-width: var(--card-w);
+		min-width: 0;
+		color: inherit;
+	}
+
+	.volume-card:not(.volume-card--soon):hover .volume-card__media {
+		transform: translateY(-2px);
+	}
+
+	.volume-card__media {
+		width: 100%;
+		aspect-ratio: 297 / 420;
+		overflow: hidden;
+		background: var(--color-soon-bg);
+		box-shadow: var(--shadow-card);
+		transition: transform 0.2s ease;
+	}
+
+	.volume-card__media img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+		object-fit: cover;
+	}
+
+	.volume-card__media--soon {
+		display: grid;
+		place-items: center;
+		background: var(--color-soon-bg);
+		color: var(--color-soon-text);
+		font-size: var(--text-heading);
+		font-weight: 700;
+		text-align: center;
+	}
+
+	.volume-card__title {
+		font-size: var(--text-heading);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+	}
+
+	.volume-card__date {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		color: var(--color-muted);
+	}
+
+	.volume-card--soon {
+		cursor: default;
+	}
+</style>

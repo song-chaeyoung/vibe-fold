@@ -1,0 +1,169 @@
+---
+import type { Chapter, Volume } from '../lib/content';
+import { chapterHref, formatChapterLabel } from '../lib/content';
+
+interface Props {
+	volume: Volume;
+	prev?: Chapter;
+	next?: Chapter;
+}
+
+const { volume, prev, next } = Astro.props;
+
+function metaLine(chapter: Chapter): string {
+	const snippet = chapter.summary.trim().split(/\s+/).slice(0, 6).join(' ');
+	return `${formatChapterLabel(chapter.order, chapter.title)} - ${snippet}`;
+}
+---
+
+<header class="chapter-chrome">
+	<div class="chapter-chrome__side chapter-chrome__side--prev">
+		{
+			prev ? (
+				<a class="chapter-chrome__nav" href={chapterHref(volume.volId, prev.chId)}>
+					<span class="chapter-chrome__action">&lt; Prev</span>
+					<span class="chapter-chrome__meta">{metaLine(prev)}</span>
+				</a>
+			) : (
+				<div class="chapter-chrome__nav chapter-chrome__nav--disabled" aria-hidden="true">
+					<span class="chapter-chrome__action">&lt; Prev</span>
+					<span class="chapter-chrome__meta">&nbsp;</span>
+				</div>
+			)
+		}
+	</div>
+
+	<a class="chapter-chrome__brand" href="/">
+		<span class="chapter-chrome__name">Vibe Magazine</span>
+		<span class="chapter-chrome__tagline">We publish visual stories that move the world</span>
+	</a>
+
+	<div class="chapter-chrome__side chapter-chrome__side--next">
+		{
+			next ? (
+				<a class="chapter-chrome__nav chapter-chrome__nav--next" href={chapterHref(volume.volId, next.chId)}>
+					<span class="chapter-chrome__action">Next &gt;</span>
+					<span class="chapter-chrome__meta">{metaLine(next)}</span>
+				</a>
+			) : (
+				<div
+					class="chapter-chrome__nav chapter-chrome__nav--next chapter-chrome__nav--disabled"
+					aria-hidden="true"
+				>
+					<span class="chapter-chrome__action">Next &gt;</span>
+					<span class="chapter-chrome__meta">&nbsp;</span>
+				</div>
+			)
+		}
+	</div>
+</header>
+
+<style>
+	.chapter-chrome {
+		position: fixed;
+		inset: 0 0 auto;
+		z-index: 20;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		gap: 0.625rem;
+		padding: var(--space-hero-y) var(--page-pad) 0;
+		pointer-events: none;
+		color: var(--color-chrome);
+	}
+
+	.chapter-chrome a {
+		pointer-events: auto;
+	}
+
+	.chapter-chrome__side {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+
+	.chapter-chrome__side--next {
+		text-align: right;
+	}
+
+	.chapter-chrome__nav {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 3.375rem;
+	}
+
+	.chapter-chrome__nav--next {
+		align-items: flex-end;
+	}
+
+	.chapter-chrome__nav--disabled {
+		opacity: 0.35;
+		pointer-events: none;
+	}
+
+	.chapter-chrome__action {
+		font-size: var(--text-brand);
+		font-weight: 700;
+		line-height: var(--lh-tight);
+		white-space: nowrap;
+	}
+
+	.chapter-chrome__meta {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.chapter-chrome__brand {
+		flex: 1 1 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 3.375rem;
+		min-width: 0;
+		text-align: center;
+	}
+
+	.chapter-chrome__name {
+		font-size: var(--text-brand);
+		font-weight: 700;
+		line-height: var(--lh-tight);
+		white-space: nowrap;
+	}
+
+	.chapter-chrome__tagline {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		white-space: nowrap;
+	}
+
+	@media (max-width: 900px) {
+		.chapter-chrome {
+			flex-wrap: wrap;
+			row-gap: 0.5rem;
+		}
+
+		.chapter-chrome__brand {
+			order: -1;
+			flex: 1 1 100%;
+		}
+
+		.chapter-chrome__meta,
+		.chapter-chrome__tagline {
+			display: none;
+		}
+
+		.chapter-chrome__action,
+		.chapter-chrome__name {
+			font-size: var(--text-brand-sm);
+		}
+	}
+</style>

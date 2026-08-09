@@ -1,0 +1,56 @@
+---
+interface Props {
+	compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+---
+
+<header class:list={['site-header', { 'site-header--compact': compact }]}>
+	<a class="brand" href="/">
+		<span class="brand__name">Vibe Magazine</span>
+		<span class="brand__tagline">We publish visual stories that move the world</span>
+	</a>
+</header>
+
+<style>
+	.site-header {
+		padding: 0;
+	}
+
+	.brand {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1.5rem;
+	}
+
+	.brand__name {
+		font-size: var(--text-brand);
+		font-weight: 700;
+		line-height: var(--lh-tight);
+	}
+
+	.brand__tagline {
+		font-size: var(--text-meta);
+		font-weight: 400;
+		line-height: var(--lh-tight);
+		color: var(--color-muted);
+	}
+
+	@media (max-width: 720px) {
+		.brand {
+			gap: 0.35rem 0.75rem;
+		}
+
+		.brand__name {
+			font-size: var(--text-brand-sm);
+			white-space: normal;
+		}
+
+		.brand__tagline {
+			flex-basis: 100%;
+			white-space: normal;
+		}
+	}
+</style>
