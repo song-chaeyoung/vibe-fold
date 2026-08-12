@@ -86,6 +86,6 @@ function contentSyncIntegration() {
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://magazine.vibecodingclub.kr',
+	site: 'https://fold.vibecodingclub.kr',
 	integrations: [contentSyncIntegration()],
 });

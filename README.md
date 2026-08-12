@@ -3,7 +3,7 @@
 Visual magazine for [Vibe Coding Club](https://vibecodingclub.kr/).  
 Site shell is Astro; each chapter is an independent interactive artwork loaded in a sandboxed iframe.
 
-**Production host:** `https://magazine.vibecodingclub.kr`
+**Production host:** `https://fold.vibecodingclub.kr`
 
 ## Stack
 
@@ -61,7 +61,8 @@ Those generated paths are gitignored.
 ## Deploy (Vercel)
 
 1. Import this repo in Vercel (Astro preset / `npm run build`, output `dist`).
-2. Attach custom domain `magazine.vibecodingclub.kr`.
-3. DNS: CNAME `magazine` → Vercel target (or A/ALIAS per Vercel docs).
+2. Attach custom domain `fold.vibecodingclub.kr`.
+3. DNS: CNAME `fold` → Vercel target (or A/ALIAS per Vercel docs).
+4. If migrating from `magazine.vibecodingclub.kr`, remove that domain and its DNS record after `fold` is live.
 
 Editors create volumes; contributors open PRs that add a single chapter folder.
