@@ -11,7 +11,7 @@
 				width: 100%;
 				height: 100%;
 				overflow: hidden;
-				background: #05080c;
+				background: #0096e8;
 				touch-action: none;
 			}
 			canvas {
@@ -25,38 +25,61 @@
 				bottom: 8%;
 				transform: translateX(-50%);
 				text-align: center;
-				color: rgba(230, 236, 242, 0.88);
-				opacity: 0;
-				transition: opacity 1.4s ease;
+				color: #ff3d00;
 				pointer-events: none;
-				letter-spacing: 0.18em;
-			}
-			.caption.is-on {
-				opacity: 1;
+				font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+				font-weight: 400;
 			}
 			.caption .en {
 				margin: 0;
-				font: 500 11px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif;
-				text-transform: uppercase;
+				font-size: 0.8125rem;
+				line-height: 1.2;
+				letter-spacing: 0.02em;
 			}
 			.caption .ko {
-				margin: 0.45rem 0 0;
-				font: 400 13px/1.4 "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-				letter-spacing: 0.08em;
-				opacity: 0.72;
+				margin: 0.35rem 0 0;
+				font-size: 0.8125rem;
+				line-height: 1.2;
+				letter-spacing: 0.02em;
+			}
+			.caption .loot {
+				margin: 0.35rem 0 0;
+				font-size: 0.8125rem;
+				line-height: 1.2;
+				opacity: 0.7;
+			}
+			.proverb {
+				position: fixed;
+				inset: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 0.12em;
+				color: #ff3d00;
+				pointer-events: none;
+				text-align: center;
+				font: 700 clamp(2.2rem, 7.4vw, 4.4rem) / 1.15 "Helvetica Neue", "Apple SD Gothic Neo",
+					"Malgun Gothic", sans-serif;
+				letter-spacing: -0.04em;
 			}
 		</style>
 	</head>
 	<body>
 		<canvas id="c"></canvas>
-		<div class="caption" id="caption">
-			<p class="en">Whale fight / the shrimp</p>
+		<div class="caption">
+			<p class="en">When whales fight, the shrimp gets crushed.</p>
 			<p class="ko">고래 싸움에 새우 등 터진다</p>
+			<p class="loot" id="loot">먹이 0</p>
+		</div>
+		<div class="proverb">
+			<span>고래 싸움에</span>
+			<span>새우 등 터진다</span>
 		</div>
 		<script>
 			const canvas = document.getElementById("c");
 			const ctx = canvas.getContext("2d");
-			const caption = document.getElementById("caption");
+			const loot = document.getElementById("loot");
 			const TAU = Math.PI * 2;
 
 			let w = 0;
@@ -77,12 +100,21 @@
 			const waves = [];
 			const bits = [];
 			const motes = [];
+			const coins = [];
+			let coinCount = 0;
+			let eatPop = 0;
+			const eatMarks = [];
+			const whales = [
+				{ x: 0, y: 0, vx: 0, vy: 0, dir: 1, ang: 0, wander: 0, bounceLock: 0 },
+				{ x: 0, y: 0, vx: 0, vy: 0, dir: -1, ang: Math.PI, wander: 0, bounceLock: 0 },
+			];
 
-			let phase = "idle";
-			let phaseT = 0;
-			let clashes = 0;
-			let flash = 0;
-			let proverbHold = 0;
+			let whalesReady = false;
+			let whaleHitLock = 0;
+			let whalesOverlapping = false;
+			let shrimpSafe = 0;
+			let silPath = null;
+			let silScale = 0;
 
 			function resize() {
 				dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -93,55 +125,384 @@
 				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 				if (!pointer.ready) {
 					pointer.x = w * 0.5;
-					pointer.y = h * 0.62;
+					pointer.y = h * 0.84;
 					shrimp.x = pointer.x;
 					shrimp.y = pointer.y;
+				}
+				if (!whalesReady) {
+					seedWhales();
+					whalesReady = true;
+				} else {
+					clampWhales();
+				}
+				seedCoins();
+			}
+
+			function placeCoin(coin) {
+				coin.x = w * (0.08 + Math.random() * 0.84);
+				coin.y = h * (0.1 + Math.random() * 0.66);
+				coin.phase = Math.random() * TAU;
+			}
+
+			function seedCoins() {
+				if (!w || !h) return;
+				if (coins.length === 0) {
+					for (let i = 0; i < 7; i += 1) {
+						const coin = { x: 0, y: 0, phase: 0 };
+						placeCoin(coin);
+						coins.push(coin);
+					}
+					return;
+				}
+				for (const coin of coins) {
+					coin.x = Math.min(w * 0.92, Math.max(w * 0.08, coin.x));
+					coin.y = Math.min(h * 0.76, Math.max(h * 0.1, coin.y));
+				}
+			}
+
+			function shrimpScale() {
+				return 1 + Math.min(coinCount, 14) * 0.09 + eatPop * 0.28;
+			}
+
+			function collectCoin(coin) {
+				coinCount += 1;
+				eatPop = 1;
+				loot.textContent = `먹이 ${coinCount}`;
+				eatMarks.push({ n: coinCount, life: 1, rise: 0 });
+				for (let i = 0; i < 6; i += 1) {
+					const a = Math.random() * TAU;
+					const sp = 24 + Math.random() * 50;
+					bits.push({
+						x: coin.x,
+						y: coin.y,
+						vx: Math.cos(a) * sp,
+						vy: Math.sin(a) * sp,
+						life: 0.55,
+						r: 1 + Math.random() * 1.4,
+						rgb: [255, 61, 0],
+					});
+				}
+				placeCoin(coin);
+			}
+
+			function stepCoins() {
+				if (!shrimp.alive) return;
+				const reach = 14 + shrimpScale() * 6;
+				for (const coin of coins) {
+					if (Math.hypot(shrimp.x - coin.x, shrimp.y - coin.y) < reach) {
+						collectCoin(coin);
+					}
+				}
+			}
+
+			function drawCoins() {
+				for (const coin of coins) {
+					const a = 0.72 + Math.sin(time * 2.4 + coin.phase) * 0.12;
+					ctx.fillStyle = `rgba(255, 61, 0, ${a})`;
+					ctx.beginPath();
+					ctx.arc(coin.x, coin.y, 4.2, 0, TAU);
+					ctx.fill();
 				}
 			}
 
 			function seedMotes() {
 				motes.length = 0;
-				for (let i = 0; i < 48; i += 1) {
+				for (let i = 0; i < 90; i += 1) {
 					motes.push({
 						x: Math.random(),
 						y: Math.random(),
-						r: 0.6 + Math.random() * 1.8,
-						s: 0.04 + Math.random() * 0.12,
-						a: 0.08 + Math.random() * 0.18,
+						r: 0.7 + Math.random() * 2.2,
+						s: 0.03 + Math.random() * 0.1,
+						a: 0.22 + Math.random() * 0.45,
 					});
 				}
 			}
 
-			function whalePose(side) {
-				const scale = Math.min(w, h) * 0.62;
-				let pull = 0;
-				if (phase === "windup") pull = easeIn(phaseT / 1.8) * 0.1;
-				if (phase === "clash") pull = 0.1 + Math.sin(phaseT * Math.PI) * 0.2;
-				if (phase === "recover") pull = 0.1 * (1 - phaseT / 1.4);
-				const x = w * (0.5 + side * (0.38 - pull));
-				const y = h * 0.56 + Math.sin(time * 0.55 + side) * h * 0.018;
-				return { x, y, scale, dir: -side };
+			function whaleScale() {
+				return Math.max(64, Math.min(w, h) * 1.08);
 			}
 
-			function easeIn(t) {
-				return t * t;
+			function whalePad() {
+				const s = whaleScale();
+				return {
+					x: Math.min(s * 0.22, w * 0.14),
+					y: Math.min(s * 0.18, h * 0.14),
+				};
+			}
+
+			function whaleSilhouette() {
+				const scale = whaleScale();
+				if (silPath && silScale === scale) return silPath;
+				silScale = scale;
+				silPath = new Path2D();
+				silPath.moveTo(-scale * 0.98, 0);
+				silPath.bezierCurveTo(-scale * 0.72, -scale * 0.36, scale * 0.12, -scale * 0.4, scale * 0.58, -scale * 0.06);
+				silPath.bezierCurveTo(scale * 0.78, scale * 0.04, scale * 0.72, scale * 0.16, scale * 0.5, scale * 0.22);
+				silPath.bezierCurveTo(scale * 0.08, scale * 0.38, -scale * 0.7, scale * 0.3, -scale * 0.98, 0);
+				silPath.closePath();
+				silPath.moveTo(-scale * 0.9, -scale * 0.02);
+				silPath.quadraticCurveTo(-scale * 1.28, -scale * 0.42, -scale * 1.4, -scale * 0.08);
+				silPath.quadraticCurveTo(-scale * 1.18, -scale * 0.02, -scale * 0.92, 0.04 * scale);
+				silPath.closePath();
+				silPath.moveTo(-scale * 0.9, 0.04 * scale);
+				silPath.quadraticCurveTo(-scale * 1.22, scale * 0.38, -scale * 1.38, scale * 0.1);
+				silPath.quadraticCurveTo(-scale * 1.12, scale * 0.06, -scale * 0.9, 0);
+				silPath.closePath();
+				silPath.ellipse(scale * 0.08, scale * 0.12, scale * 0.18, scale * 0.07, -0.4, 0, TAU);
+				return silPath;
+			}
+
+			function whaleAABB(whale) {
+				const s = whaleScale();
+				const left = whale.dir > 0 ? whale.x - s * 1.42 : whale.x - s * 0.8;
+				const right = whale.dir > 0 ? whale.x + s * 0.8 : whale.x + s * 1.42;
+				return {
+					x0: left,
+					y0: whale.y - s * 0.44,
+					x1: right,
+					y1: whale.y + s * 0.4,
+				};
+			}
+
+			function pointInWhale(whale, wx, wy) {
+				const path = whaleSilhouette();
+				const lx = (wx - whale.x) * whale.dir;
+				const ly = wy - whale.y;
+				ctx.save();
+				ctx.setTransform(1, 0, 0, 1, 0, 0);
+				const inside = ctx.isPointInPath(path, lx, ly);
+				ctx.restore();
+				return inside;
+			}
+
+			function outlineOverlap(step = 8) {
+				const a = whaleAABB(whales[0]);
+				const b = whaleAABB(whales[1]);
+				const x0 = Math.max(a.x0, b.x0);
+				const y0 = Math.max(a.y0, b.y0);
+				const x1 = Math.min(a.x1, b.x1);
+				const y1 = Math.min(a.y1, b.y1);
+				if (x1 < x0 || y1 < y0) return null;
+
+				let count = 0;
+				let sx = 0;
+				let sy = 0;
+				for (let x = x0; x <= x1; x += step) {
+					for (let y = y0; y <= y1; y += step) {
+						if (pointInWhale(whales[0], x, y) && pointInWhale(whales[1], x, y)) {
+							count += 1;
+							sx += x;
+							sy += y;
+						}
+					}
+				}
+				if (!count) return null;
+				return { x: sx / count, y: sy / count };
+			}
+
+			function seedWhales() {
+				whales[0].x = w * 0.19;
+				whales[0].y = h * 0.16;
+				whales[0].vx = 22;
+				whales[0].vy = 12;
+				whales[0].dir = 1;
+				whales[1].x = w * 0.81;
+				whales[1].y = h * 0.86;
+				whales[1].vx = -20;
+				whales[1].vy = -10;
+				whales[1].dir = -1;
+				for (const whale of whales) {
+					whale.ang = Math.atan2(whale.vy, whale.vx);
+					whale.wander = 1.5;
+					whale.bounceLock = 0;
+				}
+				whalesOverlapping = true;
+			}
+
+			function clampWhales() {
+				const pad = whalePad();
+				for (const whale of whales) {
+					whale.x = Math.min(w - pad.x, Math.max(pad.x, whale.x));
+					whale.y = Math.min(h - pad.y, Math.max(pad.y, whale.y));
+				}
+			}
+
+			function resolveOutlineOverlap() {
+				const hit = outlineOverlap(12);
+				if (!hit) return false;
+				const a = whales[0];
+				const b = whales[1];
+				let nx = b.x - a.x;
+				let ny = b.y - a.y;
+				let dist = Math.hypot(nx, ny);
+				if (dist < 1e-3) {
+					nx = hit.x - a.x;
+					ny = hit.y - a.y;
+					dist = Math.hypot(nx, ny);
+				}
+				if (dist < 1e-3) {
+					nx = 1;
+					ny = 0;
+				} else {
+					nx /= dist;
+					ny /= dist;
+				}
+
+				const ax = a.x;
+				const ay = a.y;
+				const bx = b.x;
+				const by = b.y;
+				let lo = 0;
+				let hi = whaleScale() * 2.4;
+				for (let i = 0; i < 9; i += 1) {
+					const mid = (lo + hi) / 2;
+					a.x = ax - nx * mid;
+					a.y = ay - ny * mid;
+					b.x = bx + nx * mid;
+					b.y = by + ny * mid;
+					if (outlineOverlap(14)) lo = mid;
+					else hi = mid;
+				}
+				a.x = ax - nx * (hi + 16);
+				a.y = ay - ny * (hi + 16);
+				b.x = bx + nx * (hi + 16);
+				b.y = by + ny * (hi + 16);
+				return true;
+			}
+
+			function onWhaleClash(x, y) {
+				waves.push({ x, y, r: 12, max: Math.min(w, h) * 0.28, hit: false });
+				hurt();
+			}
+
+			function faceFromVelocity(whale) {
+				whale.ang = Math.atan2(whale.vy, whale.vx);
+			}
+
+			function bounceWhales(a, b) {
+				let nx = b.x - a.x;
+				let ny = b.y - a.y;
+				const dist = Math.hypot(nx, ny) || 1;
+				nx /= dist;
+				ny /= dist;
+
+				const speedA = Math.max(20, Math.hypot(a.vx, a.vy));
+				const speedB = Math.max(20, Math.hypot(b.vx, b.vy));
+
+				const da = a.vx * nx + a.vy * ny;
+				a.vx -= 2 * da * nx;
+				a.vy -= 2 * da * ny;
+				const db = b.vx * nx + b.vy * ny;
+				b.vx -= 2 * db * nx;
+				b.vy -= 2 * db * ny;
+
+				if (a.vx * nx + a.vy * ny > -8) {
+					a.vx -= nx * speedA;
+					a.vy -= ny * speedA;
+				}
+				if (b.vx * nx + b.vy * ny < 8) {
+					b.vx += nx * speedB;
+					b.vy += ny * speedB;
+				}
+
+				const sa = Math.hypot(a.vx, a.vy) || 1;
+				const sb = Math.hypot(b.vx, b.vy) || 1;
+				a.vx = (a.vx / sa) * speedA;
+				a.vy = (a.vy / sa) * speedA;
+				b.vx = (b.vx / sb) * speedB;
+				b.vy = (b.vy / sb) * speedB;
+
+				a.bounceLock = 1.4;
+				b.bounceLock = 1.4;
+				faceFromVelocity(a);
+				faceFromVelocity(b);
+			}
+
+			function stepWhales(dt) {
+				const pad = whalePad();
+				const maxSpeed = 40;
+				const minSpeed = 20;
+
+				for (const whale of whales) {
+					if (whale.bounceLock > 0) whale.bounceLock -= dt;
+
+					if (whale.bounceLock <= 0) {
+						whale.wander -= dt;
+						if (whale.wander <= 0) {
+							whale.wander = 1.4 + Math.random() * 2.2;
+							whale.ang += (Math.random() - 0.5) * 0.7;
+						}
+						const speed = Math.max(minSpeed, Math.hypot(whale.vx, whale.vy));
+						whale.vx = Math.cos(whale.ang) * speed;
+						whale.vy = Math.sin(whale.ang) * speed;
+					}
+
+					let speed = Math.hypot(whale.vx, whale.vy);
+					if (speed < minSpeed) {
+						const ang = speed > 0.1 ? Math.atan2(whale.vy, whale.vx) : whale.ang;
+						whale.vx = Math.cos(ang) * minSpeed;
+						whale.vy = Math.sin(ang) * minSpeed;
+						speed = minSpeed;
+					} else if (speed > maxSpeed) {
+						whale.vx *= maxSpeed / speed;
+						whale.vy *= maxSpeed / speed;
+					}
+
+					whale.x += whale.vx * dt;
+					whale.y += whale.vy * dt;
+
+					if (whale.x < pad.x) {
+						whale.x = pad.x;
+						whale.vx = Math.abs(whale.vx);
+					} else if (whale.x > w - pad.x) {
+						whale.x = w - pad.x;
+						whale.vx = -Math.abs(whale.vx);
+					}
+					if (whale.y < pad.y) {
+						whale.y = pad.y;
+						whale.vy = Math.abs(whale.vy);
+					} else if (whale.y > h - pad.y) {
+						whale.y = h - pad.y;
+						whale.vy = -Math.abs(whale.vy);
+					}
+					faceFromVelocity(whale);
+				}
+
+				if (whaleHitLock > 0) whaleHitLock -= dt;
+
+				const a = whales[0];
+				const b = whales[1];
+				const overlapping = !!outlineOverlap();
+
+				if (overlapping) {
+					resolveOutlineOverlap();
+					const nx = (b.x - a.x) / (Math.hypot(b.x - a.x, b.y - a.y) || 1);
+					const ny = (b.y - a.y) / (Math.hypot(b.x - a.x, b.y - a.y) || 1);
+					const closing = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny < 0;
+					if (!whalesOverlapping || closing) {
+						bounceWhales(a, b);
+						if (!whalesOverlapping && whaleHitLock <= 0) {
+							whaleHitLock = 1.1;
+							onWhaleClash((a.x + b.x) / 2, (a.y + b.y) / 2);
+						}
+					}
+					whalesOverlapping = true;
+				} else {
+					whalesOverlapping = false;
+				}
 			}
 
 			function drawWater() {
-				const g = ctx.createLinearGradient(0, 0, 0, h);
-				g.addColorStop(0, "#071018");
-				g.addColorStop(0.45, "#0a1824");
-				g.addColorStop(1, "#03070b");
-				ctx.fillStyle = g;
+				ctx.fillStyle = "#0096e8";
 				ctx.fillRect(0, 0, w, h);
 
 				ctx.save();
-				ctx.globalAlpha = 0.07;
-				for (let i = 0; i < 7; i += 1) {
+				ctx.globalAlpha = 0.06;
+				for (let i = 0; i < 4; i += 1) {
 					const y = ((time * (8 + i * 3) + i * 90) % (h + 160)) - 80;
-					ctx.fillStyle = i % 2 ? "#8ec8e8" : "#4a7a94";
+					ctx.fillStyle = "#ffffff";
 					ctx.beginPath();
-					ctx.ellipse(w * 0.5, y, w * (0.35 + i * 0.08), 18, 0, 0, TAU);
+					ctx.ellipse(w * 0.5, y, w * (0.35 + i * 0.08), 14, 0, 0, TAU);
 					ctx.fill();
 				}
 				ctx.restore();
@@ -149,33 +510,60 @@
 				for (const m of motes) {
 					const x = (m.x * w + Math.sin(time * m.s * 8 + m.y) * 20) % w;
 					const y = (m.y * h - time * m.s * 18 + h) % h;
-					ctx.fillStyle = `rgba(190, 220, 235, ${m.a})`;
+					ctx.fillStyle = `rgba(255, 255, 255, ${m.a})`;
 					ctx.beginPath();
 					ctx.arc(x, y, m.r, 0, TAU);
 					ctx.fill();
 				}
 			}
 
-			function drawWhale(pose, tense) {
-				const { x, y, scale, dir } = pose;
-				ctx.save();
-				ctx.translate(x, y);
-				ctx.scale(dir, 1);
-				ctx.translate(0, Math.sin(time * 0.7) * 3);
+			function whalePalette() {
+				return {
+					body1: "#0086d2",
+					tail: "#007ec8",
+					fin: "#0082ce",
+					eye: "rgba(170, 214, 240, 0.35)",
+					dot: "rgba(0, 90, 160, 0.1)",
+				};
+			}
 
-				const body = ctx.createLinearGradient(-scale, -scale * 0.2, scale, scale * 0.3);
-				body.addColorStop(0, "#15222c");
-				body.addColorStop(0.45, tense ? "#3a5366" : "#2a3f4e");
-				body.addColorStop(1, "#0c141a");
-				ctx.fillStyle = body;
+			function whaleBodyPath(scale) {
 				ctx.beginPath();
 				ctx.moveTo(-scale * 0.98, 0);
 				ctx.bezierCurveTo(-scale * 0.72, -scale * 0.36, scale * 0.12, -scale * 0.4, scale * 0.58, -scale * 0.06);
 				ctx.bezierCurveTo(scale * 0.78, scale * 0.04, scale * 0.72, scale * 0.16, scale * 0.5, scale * 0.22);
 				ctx.bezierCurveTo(scale * 0.08, scale * 0.38, -scale * 0.7, scale * 0.3, -scale * 0.98, 0);
+			}
+
+			function drawWhale(whale) {
+				const scale = whaleScale();
+				const { x, y, dir } = whale;
+				const pal = whalePalette();
+				ctx.save();
+				ctx.translate(x, y);
+				ctx.scale(dir, 1);
+
+				ctx.fillStyle = pal.body1;
+				whaleBodyPath(scale);
 				ctx.fill();
 
-				ctx.fillStyle = "#101820";
+				ctx.save();
+				whaleBodyPath(scale);
+				ctx.clip();
+				ctx.fillStyle = pal.dot;
+				const gap = Math.max(6, scale * 0.028);
+				for (let hx = -scale; hx < scale * 0.7; hx += gap) {
+					for (let hy = -scale * 0.42; hy < scale * 0.36; hy += gap) {
+						if (((hx + hy) / gap) % 2 < 1) {
+							ctx.beginPath();
+							ctx.arc(hx, hy, gap * 0.22, 0, TAU);
+							ctx.fill();
+						}
+					}
+				}
+				ctx.restore();
+
+				ctx.fillStyle = pal.tail;
 				ctx.beginPath();
 				ctx.moveTo(-scale * 0.9, -scale * 0.02);
 				ctx.quadraticCurveTo(-scale * 1.28, -scale * 0.42, -scale * 1.4, -scale * 0.08);
@@ -187,35 +575,28 @@
 				ctx.quadraticCurveTo(-scale * 1.12, scale * 0.06, -scale * 0.9, 0);
 				ctx.fill();
 
-				ctx.fillStyle = "#1b2a34";
+				ctx.fillStyle = pal.fin;
 				ctx.beginPath();
 				ctx.ellipse(scale * 0.08, scale * 0.12, scale * 0.18, scale * 0.07, -0.4, 0, TAU);
 				ctx.fill();
 
-				ctx.fillStyle = tense ? "rgba(230, 236, 240, 0.55)" : "rgba(200, 214, 220, 0.22)";
+				ctx.fillStyle = pal.eye;
 				ctx.beginPath();
 				ctx.ellipse(scale * 0.42, -scale * 0.04, scale * 0.018, scale * 0.01, 0, 0, TAU);
 				ctx.fill();
-
-				if (tense) {
-					ctx.strokeStyle = "rgba(210, 230, 240, 0.12)";
-					ctx.lineWidth = 1;
-					for (let i = 0; i < 4; i += 1) {
-						ctx.beginPath();
-						ctx.moveTo(-scale * 0.2 + i * scale * 0.14, -scale * 0.12);
-						ctx.quadraticCurveTo(-scale * 0.05 + i * scale * 0.14, 0, -scale * 0.18 + i * scale * 0.14, scale * 0.14);
-						ctx.stroke();
-					}
-				}
 				ctx.restore();
 			}
 
 			function drawShrimp() {
 				if (!shrimp.alive) return;
+				const s = shrimpScale();
 				ctx.save();
 				ctx.translate(shrimp.x, shrimp.y);
 				ctx.rotate(Math.sin(time * 6) * 0.12);
-				ctx.fillStyle = "#e0874a";
+				ctx.scale(s, s);
+				ctx.shadowColor = "rgba(255, 61, 0, 0.85)";
+				ctx.shadowBlur = 8 + eatPop * 10;
+				ctx.fillStyle = "#ff3d00";
 				ctx.beginPath();
 				ctx.ellipse(0, 0, 7.5, 3.6, 0, 0, TAU);
 				ctx.fill();
@@ -224,15 +605,16 @@
 				ctx.quadraticCurveTo(-12, 5, -10, -1);
 				ctx.quadraticCurveTo(-8, 2, -5, 0);
 				ctx.fill();
-				ctx.strokeStyle = "rgba(224, 150, 90, 0.8)";
-				ctx.lineWidth = 0.8;
+				ctx.shadowBlur = 0;
+				ctx.strokeStyle = "#ff3d00";
+				ctx.lineWidth = 1;
 				ctx.beginPath();
 				ctx.moveTo(6, -1);
 				ctx.quadraticCurveTo(12, -8, 14, -3);
 				ctx.moveTo(6, 0);
 				ctx.quadraticCurveTo(11, -6, 13, 1);
 				ctx.stroke();
-				ctx.fillStyle = "#1a0c08";
+				ctx.fillStyle = "#111111";
 				ctx.beginPath();
 				ctx.arc(4.2, -0.6, 0.7, 0, TAU);
 				ctx.fill();
@@ -255,6 +637,11 @@
 			}
 
 			function spawnBits() {
+				const tones = [
+					[57, 255, 20],
+					[180, 255, 0],
+					[0, 255, 136],
+				];
 				for (let i = 0; i < 28; i += 1) {
 					const a = Math.random() * TAU;
 					const sp = 40 + Math.random() * 160;
@@ -265,40 +652,32 @@
 						vy: Math.sin(a) * sp,
 						life: 1,
 						r: 1 + Math.random() * 2.2,
+						rgb: tones[i % tones.length],
 					});
 				}
 			}
 
 			function hurt() {
-				if (!shrimp.alive || shrimp.hitLock > 0) return;
+				if (shrimpSafe > 0 || !shrimp.alive || shrimp.hitLock > 0) return;
 				shrimp.cracks += 1;
-				shrimp.hitLock = 0.55;
-				flash = 0.35;
-				if (shrimp.cracks >= 3) {
+				shrimp.hitLock = 0.8;
+				if (shrimp.cracks >= 1) {
 					shrimp.alive = false;
 					shrimp.burstT = 0;
 					spawnBits();
-					proverbHold = 3.2;
-					caption.classList.add("is-on");
 				}
-			}
-
-			function inClashZone() {
-				const left = whalePose(-1);
-				const right = whalePose(1);
-				const mid = (left.x + right.x) / 2;
-				const span = Math.abs(right.x - left.x) * 0.42;
-				return Math.abs(shrimp.x - mid) < span && Math.abs(shrimp.y - h * 0.56) < h * 0.22;
 			}
 
 			function step(dt) {
 				time += dt;
-				phaseT += dt;
+				if (shrimpSafe > 0) shrimpSafe -= dt;
 				if (shrimp.hitLock > 0) shrimp.hitLock -= dt;
-				if (flash > 0) flash -= dt;
-				if (proverbHold > 0) {
-					proverbHold -= dt;
-					if (proverbHold <= 0) caption.classList.remove("is-on");
+				if (eatPop > 0) eatPop = Math.max(0, eatPop - dt * 4.2);
+				for (let i = eatMarks.length - 1; i >= 0; i -= 1) {
+					const mark = eatMarks[i];
+					mark.rise += dt * 36;
+					mark.life -= dt * 1.15;
+					if (mark.life <= 0) eatMarks.splice(i, 1);
 				}
 
 				if (shrimp.alive && pointer.ready) {
@@ -306,35 +685,15 @@
 					shrimp.y += (pointer.y - shrimp.y) * 0.13;
 				}
 
-				const idleFor = Math.max(4.2, 8.2 - clashes * 0.7);
-				if (phase === "idle" && phaseT > idleFor) {
-					phase = "windup";
-					phaseT = 0;
-				} else if (phase === "windup" && phaseT > 1.8) {
-					phase = "clash";
-					phaseT = 0;
-					waves.push({ x: w * 0.5, y: h * 0.56, r: 20, max: Math.max(w, h) * 0.85, hit: false });
-					clashes += 1;
-				} else if (phase === "clash" && phaseT > 0.72) {
-					phase = "recover";
-					phaseT = 0;
-				} else if (phase === "recover" && phaseT > 1.4) {
-					phase = "idle";
-					phaseT = 0;
-				}
-
-				if (phase === "clash" && shrimp.alive && inClashZone()) hurt();
+				stepWhales(dt);
+				stepCoins();
 
 				for (let i = waves.length - 1; i >= 0; i -= 1) {
 					const wave = waves[i];
-					wave.r += dt * 520;
+					wave.r += dt * 220;
 					const dist = Math.hypot(shrimp.x - wave.x, shrimp.y - wave.y);
-					if (!wave.hit && shrimp.alive && Math.abs(dist - wave.r) < 18) {
+					if (!wave.hit && shrimp.alive && Math.abs(dist - wave.r) < 12) {
 						wave.hit = true;
-						const nx = (shrimp.x - wave.x) / (dist || 1);
-						const ny = (shrimp.y - wave.y) / (dist || 1);
-						shrimp.x += nx * 26;
-						shrimp.y += ny * 26;
 						hurt();
 					}
 					if (wave.r > wave.max) waves.splice(i, 1);
@@ -357,6 +716,11 @@
 						shrimp.y = h * (0.4 + Math.random() * 0.35);
 						pointer.x = shrimp.x;
 						pointer.y = shrimp.y;
+						shrimpSafe = 1.4;
+						coinCount = 0;
+						eatPop = 0;
+						eatMarks.length = 0;
+						loot.textContent = "먹이 0";
 					}
 				}
 			}
@@ -364,32 +728,34 @@
 			function drawWaves() {
 				for (const wave of waves) {
 					const a = 1 - wave.r / wave.max;
-					ctx.strokeStyle = `rgba(210, 230, 240, ${0.18 * a})`;
-					ctx.lineWidth = 3;
+					ctx.strokeStyle = `rgba(255, 61, 0, ${0.28 * a})`;
+					ctx.lineWidth = 1.5;
 					ctx.beginPath();
 					ctx.arc(wave.x, wave.y, wave.r, 0, TAU);
 					ctx.stroke();
 				}
 			}
 
+			function drawEatMarks() {
+				if (!shrimp.alive) return;
+				ctx.save();
+				ctx.textAlign = "center";
+				ctx.textBaseline = "bottom";
+				ctx.font = '700 18px "Helvetica Neue", Helvetica, Arial, sans-serif';
+				for (const mark of eatMarks) {
+					ctx.fillStyle = `rgba(255, 61, 0, ${Math.max(0, mark.life)})`;
+					ctx.fillText(`+${mark.n}`, shrimp.x, shrimp.y - 16 - mark.rise);
+				}
+				ctx.restore();
+			}
+
 			function drawBits() {
 				for (const bit of bits) {
-					ctx.fillStyle = `rgba(232, 214, 196, ${bit.life})`;
+					const [r, g, b] = bit.rgb || [255, 61, 0];
+					ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${bit.life})`;
 					ctx.beginPath();
 					ctx.arc(bit.x, bit.y, bit.r, 0, TAU);
 					ctx.fill();
-				}
-			}
-
-			function drawVignette() {
-				const g = ctx.createRadialGradient(w * 0.5, h * 0.55, h * 0.2, w * 0.5, h * 0.5, h * 0.85);
-				g.addColorStop(0, "rgba(0,0,0,0)");
-				g.addColorStop(1, "rgba(0,0,0,0.55)");
-				ctx.fillStyle = g;
-				ctx.fillRect(0, 0, w, h);
-				if (flash > 0) {
-					ctx.fillStyle = `rgba(240, 246, 250, ${flash * 0.55})`;
-					ctx.fillRect(0, 0, w, h);
 				}
 			}
 
@@ -398,13 +764,13 @@
 				last = now;
 				step(dt);
 				drawWater();
-				const tense = phase === "windup" || phase === "clash";
-				drawWhale(whalePose(-1), tense);
-				drawWhale(whalePose(1), tense);
+				drawWhale(whales[0]);
+				drawWhale(whales[1]);
 				drawWaves();
+				drawCoins();
 				drawBits();
 				drawShrimp();
-				drawVignette();
+				drawEatMarks();
 				requestAnimationFrame(frame);
 			}
 
