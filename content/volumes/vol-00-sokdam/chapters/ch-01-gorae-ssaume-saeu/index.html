@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>고래 싸움에 새우 등 터진다</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #05080c;
+				touch-action: none;
+			}
+			canvas {
+				display: block;
+				width: 100%;
+				height: 100%;
+			}
+			.caption {
+				position: fixed;
+				left: 50%;
+				bottom: 8%;
+				transform: translateX(-50%);
+				text-align: center;
+				color: rgba(230, 236, 242, 0.88);
+				opacity: 0;
+				transition: opacity 1.4s ease;
+				pointer-events: none;
+				letter-spacing: 0.18em;
+			}
+			.caption.is-on {
+				opacity: 1;
+			}
+			.caption .en {
+				margin: 0;
+				font: 500 11px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif;
+				text-transform: uppercase;
+			}
+			.caption .ko {
+				margin: 0.45rem 0 0;
+				font: 400 13px/1.4 "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+				letter-spacing: 0.08em;
+				opacity: 0.72;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="c"></canvas>
+		<div class="caption" id="caption">
+			<p class="en">Whale fight / the shrimp</p>
+			<p class="ko">고래 싸움에 새우 등 터진다</p>
+		</div>
+		<script>
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+			const caption = document.getElementById("caption");
+			const TAU = Math.PI * 2;
+
+			let w = 0;
+			let h = 0;
+			let dpr = 1;
+			let time = 0;
+			let last = performance.now();
+
+			const pointer = { x: 0, y: 0, ready: false };
+			const shrimp = {
+				x: 0,
+				y: 0,
+				cracks: 0,
+				alive: true,
+				burstT: 0,
+				hitLock: 0,
+			};
+			const waves = [];
+			const bits = [];
+			const motes = [];
+
+			let phase = "idle";
+			let phaseT = 0;
+			let clashes = 0;
+			let flash = 0;
+			let proverbHold = 0;
+
+			function resize() {
+				dpr = Math.min(window.devicePixelRatio || 1, 2);
+				w = window.innerWidth;
+				h = window.innerHeight;
+				canvas.width = Math.floor(w * dpr);
+				canvas.height = Math.floor(h * dpr);
+				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+				if (!pointer.ready) {
+					pointer.x = w * 0.5;
+					pointer.y = h * 0.62;
+					shrimp.x = pointer.x;
+					shrimp.y = pointer.y;
+				}
+			}
+
+			function seedMotes() {
+				motes.length = 0;
+				for (let i = 0; i < 48; i += 1) {
+					motes.push({
+						x: Math.random(),
+						y: Math.random(),
+						r: 0.6 + Math.random() * 1.8,
+						s: 0.04 + Math.random() * 0.12,
+						a: 0.08 + Math.random() * 0.18,
+					});
+				}
+			}
+
+			function whalePose(side) {
+				const scale = Math.min(w, h) * 0.62;
+				let pull = 0;
+				if (phase === "windup") pull = easeIn(phaseT / 1.8) * 0.1;
+				if (phase === "clash") pull = 0.1 + Math.sin(phaseT * Math.PI) * 0.2;
+				if (phase === "recover") pull = 0.1 * (1 - phaseT / 1.4);
+				const x = w * (0.5 + side * (0.38 - pull));
+				const y = h * 0.56 + Math.sin(time * 0.55 + side) * h * 0.018;
+				return { x, y, scale, dir: -side };
+			}
+
+			function easeIn(t) {
+				return t * t;
+			}
+
+			function drawWater() {
+				const g = ctx.createLinearGradient(0, 0, 0, h);
+				g.addColorStop(0, "#071018");
+				g.addColorStop(0.45, "#0a1824");
+				g.addColorStop(1, "#03070b");
+				ctx.fillStyle = g;
+				ctx.fillRect(0, 0, w, h);
+
+				ctx.save();
+				ctx.globalAlpha = 0.07;
+				for (let i = 0; i < 7; i += 1) {
+					const y = ((time * (8 + i * 3) + i * 90) % (h + 160)) - 80;
+					ctx.fillStyle = i % 2 ? "#8ec8e8" : "#4a7a94";
+					ctx.beginPath();
+					ctx.ellipse(w * 0.5, y, w * (0.35 + i * 0.08), 18, 0, 0, TAU);
+					ctx.fill();
+				}
+				ctx.restore();
+
+				for (const m of motes) {
+					const x = (m.x * w + Math.sin(time * m.s * 8 + m.y) * 20) % w;
+					const y = (m.y * h - time * m.s * 18 + h) % h;
+					ctx.fillStyle = `rgba(190, 220, 235, ${m.a})`;
+					ctx.beginPath();
+					ctx.arc(x, y, m.r, 0, TAU);
+					ctx.fill();
+				}
+			}
+
+			function drawWhale(pose, tense) {
+				const { x, y, scale, dir } = pose;
+				ctx.save();
+				ctx.translate(x, y);
+				ctx.scale(dir, 1);
+				ctx.translate(0, Math.sin(time * 0.7) * 3);
+
+				const body = ctx.createLinearGradient(-scale, -scale * 0.2, scale, scale * 0.3);
+				body.addColorStop(0, "#15222c");
+				body.addColorStop(0.45, tense ? "#3a5366" : "#2a3f4e");
+				body.addColorStop(1, "#0c141a");
+				ctx.fillStyle = body;
+				ctx.beginPath();
+				ctx.moveTo(-scale * 0.98, 0);
+				ctx.bezierCurveTo(-scale * 0.72, -scale * 0.36, scale * 0.12, -scale * 0.4, scale * 0.58, -scale * 0.06);
+				ctx.bezierCurveTo(scale * 0.78, scale * 0.04, scale * 0.72, scale * 0.16, scale * 0.5, scale * 0.22);
+				ctx.bezierCurveTo(scale * 0.08, scale * 0.38, -scale * 0.7, scale * 0.3, -scale * 0.98, 0);
+				ctx.fill();
+
+				ctx.fillStyle = "#101820";
+				ctx.beginPath();
+				ctx.moveTo(-scale * 0.9, -scale * 0.02);
+				ctx.quadraticCurveTo(-scale * 1.28, -scale * 0.42, -scale * 1.4, -scale * 0.08);
+				ctx.quadraticCurveTo(-scale * 1.18, -scale * 0.02, -scale * 0.92, 0.04 * scale);
+				ctx.fill();
+				ctx.beginPath();
+				ctx.moveTo(-scale * 0.9, 0.04 * scale);
+				ctx.quadraticCurveTo(-scale * 1.22, scale * 0.38, -scale * 1.38, scale * 0.1);
+				ctx.quadraticCurveTo(-scale * 1.12, scale * 0.06, -scale * 0.9, 0);
+				ctx.fill();
+
+				ctx.fillStyle = "#1b2a34";
+				ctx.beginPath();
+				ctx.ellipse(scale * 0.08, scale * 0.12, scale * 0.18, scale * 0.07, -0.4, 0, TAU);
+				ctx.fill();
+
+				ctx.fillStyle = tense ? "rgba(230, 236, 240, 0.55)" : "rgba(200, 214, 220, 0.22)";
+				ctx.beginPath();
+				ctx.ellipse(scale * 0.42, -scale * 0.04, scale * 0.018, scale * 0.01, 0, 0, TAU);
+				ctx.fill();
+
+				if (tense) {
+					ctx.strokeStyle = "rgba(210, 230, 240, 0.12)";
+					ctx.lineWidth = 1;
+					for (let i = 0; i < 4; i += 1) {
+						ctx.beginPath();
+						ctx.moveTo(-scale * 0.2 + i * scale * 0.14, -scale * 0.12);
+						ctx.quadraticCurveTo(-scale * 0.05 + i * scale * 0.14, 0, -scale * 0.18 + i * scale * 0.14, scale * 0.14);
+						ctx.stroke();
+					}
+				}
+				ctx.restore();
+			}
+
+			function drawShrimp() {
+				if (!shrimp.alive) return;
+				ctx.save();
+				ctx.translate(shrimp.x, shrimp.y);
+				ctx.rotate(Math.sin(time * 6) * 0.12);
+				ctx.fillStyle = "#e0874a";
+				ctx.beginPath();
+				ctx.ellipse(0, 0, 7.5, 3.6, 0, 0, TAU);
+				ctx.fill();
+				ctx.beginPath();
+				ctx.moveTo(-6, 0);
+				ctx.quadraticCurveTo(-12, 5, -10, -1);
+				ctx.quadraticCurveTo(-8, 2, -5, 0);
+				ctx.fill();
+				ctx.strokeStyle = "rgba(224, 150, 90, 0.8)";
+				ctx.lineWidth = 0.8;
+				ctx.beginPath();
+				ctx.moveTo(6, -1);
+				ctx.quadraticCurveTo(12, -8, 14, -3);
+				ctx.moveTo(6, 0);
+				ctx.quadraticCurveTo(11, -6, 13, 1);
+				ctx.stroke();
+				ctx.fillStyle = "#1a0c08";
+				ctx.beginPath();
+				ctx.arc(4.2, -0.6, 0.7, 0, TAU);
+				ctx.fill();
+
+				ctx.strokeStyle = "rgba(40, 12, 8, 0.85)";
+				ctx.lineWidth = 0.7;
+				if (shrimp.cracks >= 1) {
+					ctx.beginPath();
+					ctx.moveTo(-2, -2.4);
+					ctx.lineTo(1.5, 0.2);
+					ctx.stroke();
+				}
+				if (shrimp.cracks >= 2) {
+					ctx.beginPath();
+					ctx.moveTo(0.5, -2.8);
+					ctx.lineTo(-1, 1.6);
+					ctx.stroke();
+				}
+				ctx.restore();
+			}
+
+			function spawnBits() {
+				for (let i = 0; i < 28; i += 1) {
+					const a = Math.random() * TAU;
+					const sp = 40 + Math.random() * 160;
+					bits.push({
+						x: shrimp.x,
+						y: shrimp.y,
+						vx: Math.cos(a) * sp,
+						vy: Math.sin(a) * sp,
+						life: 1,
+						r: 1 + Math.random() * 2.2,
+					});
+				}
+			}
+
+			function hurt() {
+				if (!shrimp.alive || shrimp.hitLock > 0) return;
+				shrimp.cracks += 1;
+				shrimp.hitLock = 0.55;
+				flash = 0.35;
+				if (shrimp.cracks >= 3) {
+					shrimp.alive = false;
+					shrimp.burstT = 0;
+					spawnBits();
+					proverbHold = 3.2;
+					caption.classList.add("is-on");
+				}
+			}
+
+			function inClashZone() {
+				const left = whalePose(-1);
+				const right = whalePose(1);
+				const mid = (left.x + right.x) / 2;
+				const span = Math.abs(right.x - left.x) * 0.42;
+				return Math.abs(shrimp.x - mid) < span && Math.abs(shrimp.y - h * 0.56) < h * 0.22;
+			}
+
+			function step(dt) {
+				time += dt;
+				phaseT += dt;
+				if (shrimp.hitLock > 0) shrimp.hitLock -= dt;
+				if (flash > 0) flash -= dt;
+				if (proverbHold > 0) {
+					proverbHold -= dt;
+					if (proverbHold <= 0) caption.classList.remove("is-on");
+				}
+
+				if (shrimp.alive && pointer.ready) {
+					shrimp.x += (pointer.x - shrimp.x) * 0.13;
+					shrimp.y += (pointer.y - shrimp.y) * 0.13;
+				}
+
+				const idleFor = Math.max(4.2, 8.2 - clashes * 0.7);
+				if (phase === "idle" && phaseT > idleFor) {
+					phase = "windup";
+					phaseT = 0;
+				} else if (phase === "windup" && phaseT > 1.8) {
+					phase = "clash";
+					phaseT = 0;
+					waves.push({ x: w * 0.5, y: h * 0.56, r: 20, max: Math.max(w, h) * 0.85, hit: false });
+					clashes += 1;
+				} else if (phase === "clash" && phaseT > 0.72) {
+					phase = "recover";
+					phaseT = 0;
+				} else if (phase === "recover" && phaseT > 1.4) {
+					phase = "idle";
+					phaseT = 0;
+				}
+
+				if (phase === "clash" && shrimp.alive && inClashZone()) hurt();
+
+				for (let i = waves.length - 1; i >= 0; i -= 1) {
+					const wave = waves[i];
+					wave.r += dt * 520;
+					const dist = Math.hypot(shrimp.x - wave.x, shrimp.y - wave.y);
+					if (!wave.hit && shrimp.alive && Math.abs(dist - wave.r) < 18) {
+						wave.hit = true;
+						const nx = (shrimp.x - wave.x) / (dist || 1);
+						const ny = (shrimp.y - wave.y) / (dist || 1);
+						shrimp.x += nx * 26;
+						shrimp.y += ny * 26;
+						hurt();
+					}
+					if (wave.r > wave.max) waves.splice(i, 1);
+				}
+
+				for (let i = bits.length - 1; i >= 0; i -= 1) {
+					const bit = bits[i];
+					bit.x += bit.vx * dt;
+					bit.y += bit.vy * dt + 20 * dt;
+					bit.life -= dt * 0.7;
+					if (bit.life <= 0) bits.splice(i, 1);
+				}
+
+				if (!shrimp.alive) {
+					shrimp.burstT += dt;
+					if (shrimp.burstT > 2.1) {
+						shrimp.alive = true;
+						shrimp.cracks = 0;
+						shrimp.x = Math.random() < 0.5 ? w * 0.12 : w * 0.88;
+						shrimp.y = h * (0.4 + Math.random() * 0.35);
+						pointer.x = shrimp.x;
+						pointer.y = shrimp.y;
+					}
+				}
+			}
+
+			function drawWaves() {
+				for (const wave of waves) {
+					const a = 1 - wave.r / wave.max;
+					ctx.strokeStyle = `rgba(210, 230, 240, ${0.18 * a})`;
+					ctx.lineWidth = 3;
+					ctx.beginPath();
+					ctx.arc(wave.x, wave.y, wave.r, 0, TAU);
+					ctx.stroke();
+				}
+			}
+
+			function drawBits() {
+				for (const bit of bits) {
+					ctx.fillStyle = `rgba(232, 214, 196, ${bit.life})`;
+					ctx.beginPath();
+					ctx.arc(bit.x, bit.y, bit.r, 0, TAU);
+					ctx.fill();
+				}
+			}
+
+			function drawVignette() {
+				const g = ctx.createRadialGradient(w * 0.5, h * 0.55, h * 0.2, w * 0.5, h * 0.5, h * 0.85);
+				g.addColorStop(0, "rgba(0,0,0,0)");
+				g.addColorStop(1, "rgba(0,0,0,0.55)");
+				ctx.fillStyle = g;
+				ctx.fillRect(0, 0, w, h);
+				if (flash > 0) {
+					ctx.fillStyle = `rgba(240, 246, 250, ${flash * 0.55})`;
+					ctx.fillRect(0, 0, w, h);
+				}
+			}
+
+			function frame(now) {
+				const dt = Math.min(0.033, (now - last) / 1000);
+				last = now;
+				step(dt);
+				drawWater();
+				const tense = phase === "windup" || phase === "clash";
+				drawWhale(whalePose(-1), tense);
+				drawWhale(whalePose(1), tense);
+				drawWaves();
+				drawBits();
+				drawShrimp();
+				drawVignette();
+				requestAnimationFrame(frame);
+			}
+
+			function setPointer(event) {
+				const rect = canvas.getBoundingClientRect();
+				pointer.x = event.clientX - rect.left;
+				pointer.y = event.clientY - rect.top;
+				pointer.ready = true;
+			}
+
+			window.addEventListener("resize", resize);
+			canvas.addEventListener("pointermove", setPointer);
+			canvas.addEventListener("pointerdown", setPointer);
+			window.addEventListener("keydown", (event) => {
+				const stepPx = 28;
+				if (event.key === "ArrowLeft") pointer.x -= stepPx;
+				if (event.key === "ArrowRight") pointer.x += stepPx;
+				if (event.key === "ArrowUp") pointer.y -= stepPx;
+				if (event.key === "ArrowDown") pointer.y += stepPx;
+				pointer.ready = true;
+			});
+
+			resize();
+			seedMotes();
+			requestAnimationFrame(frame);
+		</script>
+	</body>
+</html>

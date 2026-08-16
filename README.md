@@ -39,22 +39,18 @@ npm run preview
 content/
   _templates/chapter/          # copy this to start a chapter
   volumes/
-    vol-05-nike/
+    vol-01-seolhwa/            # Vol.1 설화 — open call, coming soon
+      volume.yaml              # includes ordered `chapters:` list
+    vol-00-sokdam/             # Vol.0 속담 — example volume
       volume.yaml
-      cover.svg
       chapters/
-        ch-01-just-do-it/
-          meta.yaml
-          thumb.svg
-          index.html
 ```
 
-`volume.yaml` / chapter `meta.yaml` schemas and contribution rules: see [CONTRIBUTING.md](./CONTRIBUTING.md).
+Chapter order is the `chapters:` list in each `volume.yaml` (folder names, top to bottom). `volume.yaml` / chapter `meta.yaml` schemas and contribution rules: see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-On `astro dev` / `astro build`, chapter folders and volume covers are synced to:
+Home / archive covers use the first chapter thumbnail. On `astro dev` / `astro build`, chapter folders are synced to:
 
 - `public/chapters/{volId}/{chId}/`
-- `public/volumes/{volId}/`
 
 Those generated paths are gitignored.
 

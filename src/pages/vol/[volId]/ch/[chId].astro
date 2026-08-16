@@ -3,7 +3,7 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import ChapterChrome from '../../../../components/ChapterChrome.astro';
 import {
 	formatChapterLabel,
-	formatVolLabel,
+	formatVolumeTitle,
 	getAdjacentChapters,
 	getAllVolumes,
 	getVolumeByVolId,
@@ -32,7 +32,7 @@ if (!current) {
 	throw new Error(`Chapter not found: ${volId}/${chId}`);
 }
 
-const pageTitle = `${formatChapterLabel(current.order, current.title)} · ${formatVolLabel(volume.number)} ${volume.title}`;
+const pageTitle = `${formatChapterLabel(current.order, current.title)} · ${formatVolumeTitle(volume)}`;
 ---
 
 <BaseLayout title={`${pageTitle} · Vibe Fold`} description={current.summary} bodyClass="page-chapter">

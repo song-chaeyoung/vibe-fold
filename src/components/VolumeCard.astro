@@ -1,6 +1,6 @@
 ---
 import type { Volume } from '../lib/content';
-import { formatVolLabel, volumeHref } from '../lib/content';
+import { formatVolumeTitle, volumeHref } from '../lib/content';
 
 interface Props {
 	volume: Volume;
@@ -8,7 +8,7 @@ interface Props {
 
 const { volume } = Astro.props;
 const isComingSoon = volume.status === 'coming_soon';
-const label = `${formatVolLabel(volume.number)} ${volume.title}`;
+const label = formatVolumeTitle(volume);
 ---
 
 {
@@ -18,15 +18,15 @@ const label = `${formatVolLabel(volume.number)} ${volume.title}`;
 				<span>Coming Soon</span>
 			</div>
 			<p class="volume-card__title">{label}</p>
-			<p class="volume-card__date">{volume.date}</p>
+			{!volume.example && <p class="volume-card__date">{volume.date}</p>}
 		</article>
 	) : (
-		<a class="volume-card" href={volumeHref(volume.volId)}>
+		<a class="volume-card" href={volumeHref(volume.volId)} aria-label={label}>
 			<div class="volume-card__media">
-				<img src={volume.coverSrc} alt="" loading="lazy" />
+				{volume.coverSrc && <img src={volume.coverSrc} alt="" loading="lazy" />}
 			</div>
 			<p class="volume-card__title">{label}</p>
-			<p class="volume-card__date">{volume.date}</p>
+			{!volume.example && <p class="volume-card__date">{volume.date}</p>}
 		</a>
 	)
 }

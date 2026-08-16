@@ -12,6 +12,11 @@ import {
 
 const volumes = getAllVolumes();
 const featured = getFeaturedVolume();
+const featuredTitle = featured
+	? featured.example
+		? `${featured.title} (Example)`
+		: featured.title
+	: '';
 const summaryParagraphs = featured?.summary.split(/\n\n+/).filter(Boolean) ?? [];
 ---
 
@@ -20,7 +25,7 @@ const summaryParagraphs = featured?.summary.split(/\n\n+/).filter(Boolean) ?? []
 		{
 			featured && (
 				<div class="home__atmosphere" aria-hidden="true">
-					<img class="home__atmosphere-image" src={featured.coverSrc} alt="" />
+					{featured.coverSrc && <img class="home__atmosphere-image" src={featured.coverSrc} alt="" />}
 					<div class="home__atmosphere-frost" />
 					<div class="home__atmosphere-mist home__atmosphere-mist--x" />
 					<div class="home__atmosphere-mist home__atmosphere-mist--y" />
@@ -38,7 +43,7 @@ const summaryParagraphs = featured?.summary.split(/\n\n+/).filter(Boolean) ?? []
 							<div class="hero__copy">
 								<p class="hero__vol">{formatVolLabel(featured.number)}</p>
 								<h1 class="hero__title">
-									<a href={volumeHref(featured.volId)}>{featured.title}</a>
+									<a href={volumeHref(featured.volId)}>{featuredTitle}</a>
 								</h1>
 								<div class="hero__summary">
 									{summaryParagraphs.map((paragraph) => (
@@ -50,9 +55,9 @@ const summaryParagraphs = featured?.summary.split(/\n\n+/).filter(Boolean) ?? []
 						<a
 							class="hero__cover"
 							href={volumeHref(featured.volId)}
-							aria-label={`Open ${featured.title}`}
+							aria-label={`Open ${featuredTitle}`}
 						>
-							<img src={featured.coverSrc} alt="" />
+							{featured.coverSrc && <img src={featured.coverSrc} alt="" />}
 						</a>
 					</div>
 				) : (

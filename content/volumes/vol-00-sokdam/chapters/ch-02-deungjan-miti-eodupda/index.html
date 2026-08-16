@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>등잔 밑이 어둡다</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+				background: #070604;
+				touch-action: none;
+				cursor: none;
+			}
+			canvas {
+				display: block;
+				width: 100%;
+				height: 100%;
+			}
+			.caption {
+				position: fixed;
+				opacity: 0;
+				transition: opacity 1.6s ease;
+				pointer-events: none;
+				color: #d8c49a;
+				writing-mode: vertical-rl;
+				font: 400 15px/1.8 "Apple Myungjo", "Songti SC", "Batang", serif;
+				letter-spacing: 0.22em;
+			}
+			.caption.is-on {
+				opacity: 1;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="c"></canvas>
+		<div class="caption" id="caption">등잔 밑이 어둡다</div>
+		<script>
+			const canvas = document.getElementById("c");
+			const ctx = canvas.getContext("2d");
+			const caption = document.getElementById("caption");
+			const TAU = Math.PI * 2;
+
+			let w = 0;
+			let h = 0;
+			let dpr = 1;
+			let time = 0;
+			let last = performance.now();
+
+			const home = { x: 0, y: 0 };
+			const lamp = { x: 0, y: 0 };
+			const hand = { x: 0, y: 0 };
+			let dragging = false;
+			let seen = 0;
+			let revealed = false;
+
+			const decoys = [];
+			let mothA = 0;
+			let spark = 0;
+			let sparkX = 0;
+			let sparkY = 0;
+
+			function resize() {
+				dpr = Math.min(window.devicePixelRatio || 1, 2);
+				w = window.innerWidth;
+				h = window.innerHeight;
+				canvas.width = Math.floor(w * dpr);
+				canvas.height = Math.floor(h * dpr);
+				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+				home.x = w * 0.5;
+				home.y = h * 0.58;
+				if (!lamp.x) {
+					lamp.x = home.x;
+					lamp.y = home.y;
+					hand.x = w * 0.62;
+					hand.y = h * 0.48;
+				}
+				caption.style.left = `${Math.round(home.x + 36)}px`;
+				caption.style.top = `${Math.round(home.y - 70)}px`;
+				layoutDecoys();
+			}
+
+			function layoutDecoys() {
+				decoys.length = 0;
+				decoys.push({ kind: "coin", x: w * 0.28, y: h * 0.72, r: 22 });
+				decoys.push({ kind: "book", x: w * 0.72, y: h * 0.7, r: 34 });
+				decoys.push({ kind: "moon", x: w * 0.78, y: h * 0.36, r: 28 });
+				decoys.push({ kind: "moth", x: 0, y: 0, r: 16 });
+			}
+
+			function flame() {
+				return { x: lamp.x, y: lamp.y - 46 };
+			}
+
+			function drawRoom() {
+				const wall = ctx.createLinearGradient(0, 0, 0, h);
+				wall.addColorStop(0, "#4a3220");
+				wall.addColorStop(0.4, "#5a3c24");
+				wall.addColorStop(1, "#2c1c12");
+				ctx.fillStyle = wall;
+				ctx.fillRect(0, 0, w, h);
+
+				ctx.fillStyle = "#6a4a30";
+				ctx.fillRect(0, h * 0.62, w, h * 0.38);
+				ctx.strokeStyle = "rgba(20, 12, 8, 0.35)";
+				ctx.lineWidth = 1;
+				for (let i = 0; i < 14; i += 1) {
+					const y = h * 0.62 + i * 18;
+					ctx.beginPath();
+					ctx.moveTo(0, y);
+					ctx.lineTo(w, y + 6);
+					ctx.stroke();
+				}
+
+				ctx.fillStyle = "#1b140e";
+				ctx.fillRect(w * 0.7, h * 0.22, w * 0.16, h * 0.24);
+				ctx.fillStyle = "#2e2418";
+				ctx.fillRect(w * 0.712, h * 0.236, w * 0.136, h * 0.208);
+			}
+
+			function drawMoon() {
+				ctx.fillStyle = "#d8c9a0";
+				ctx.beginPath();
+				ctx.arc(w * 0.78, h * 0.34, 16, 0, TAU);
+				ctx.fill();
+				ctx.fillStyle = "#2e2418";
+				ctx.beginPath();
+				ctx.arc(w * 0.79, h * 0.33, 16, 0, TAU);
+				ctx.fill();
+			}
+
+			function drawCoin(x, y) {
+				ctx.fillStyle = "#c9a45a";
+				ctx.beginPath();
+				ctx.ellipse(x, y, 11, 4.5, -0.2, 0, TAU);
+				ctx.fill();
+				ctx.strokeStyle = "#8a6a30";
+				ctx.stroke();
+			}
+
+			function drawBook(x, y) {
+				ctx.save();
+				ctx.translate(x, y);
+				ctx.rotate(-0.12);
+				ctx.fillStyle = "#6b2e22";
+				ctx.fillRect(-22, -6, 44, 14);
+				ctx.fillStyle = "#d8c9a8";
+				ctx.fillRect(-20, -8, 40, 4);
+				ctx.restore();
+			}
+
+			function drawKey() {
+				const dist = Math.hypot(lamp.x - home.x, lamp.y - home.y);
+				const vis = Math.max(0, Math.min(1, (dist - 36) / 70));
+				if (vis <= 0.02) return vis;
+				ctx.save();
+				ctx.globalAlpha = 0.25 + vis * 0.75;
+				ctx.translate(home.x, home.y + 38);
+				ctx.rotate(-0.4);
+				ctx.strokeStyle = "#b08948";
+				ctx.lineWidth = 2.2;
+				ctx.beginPath();
+				ctx.arc(0, 0, 6, 0, TAU);
+				ctx.moveTo(6, 0);
+				ctx.lineTo(22, 0);
+				ctx.moveTo(16, 0);
+				ctx.lineTo(16, 5);
+				ctx.moveTo(20, 0);
+				ctx.lineTo(20, 4);
+				ctx.stroke();
+				ctx.restore();
+				return vis;
+			}
+
+			function drawLamp() {
+				const f = flame();
+				const flicker = 0.85 + Math.sin(time * 17) * 0.08 + Math.sin(time * 29) * 0.04;
+				ctx.save();
+				ctx.translate(lamp.x, lamp.y);
+				ctx.fillStyle = "#2a1c10";
+				ctx.beginPath();
+				ctx.ellipse(0, 18, 22, 6, 0, 0, TAU);
+				ctx.fill();
+				ctx.fillStyle = "#8a6a3a";
+				ctx.fillRect(-3, -8, 6, 26);
+				ctx.beginPath();
+				ctx.moveTo(-14, -8);
+				ctx.lineTo(14, -8);
+				ctx.lineTo(10, 4);
+				ctx.lineTo(-10, 4);
+				ctx.closePath();
+				ctx.fill();
+				ctx.fillStyle = "rgba(230, 210, 150, 0.18)";
+				ctx.fillRect(-9, -40, 18, 32);
+				ctx.strokeStyle = "rgba(180, 150, 90, 0.45)";
+				ctx.strokeRect(-9, -40, 18, 32);
+				ctx.restore();
+
+				const glow = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 26);
+				glow.addColorStop(0, `rgba(255, 220, 140, ${0.95 * flicker})`);
+				glow.addColorStop(0.4, `rgba(255, 160, 60, ${0.45 * flicker})`);
+				glow.addColorStop(1, "rgba(255, 120, 20, 0)");
+				ctx.fillStyle = glow;
+				ctx.beginPath();
+				ctx.arc(f.x, f.y, 26, 0, TAU);
+				ctx.fill();
+			}
+
+			function drawMoth() {
+				mothA = time * 1.3;
+				const f = flame();
+				const mx = f.x + Math.cos(mothA) * 54;
+				const my = f.y + Math.sin(mothA * 1.4) * 28;
+				decoys[3].x = mx;
+				decoys[3].y = my;
+				ctx.save();
+				ctx.translate(mx, my);
+				ctx.rotate(mothA);
+				ctx.fillStyle = "#d8cfc0";
+				ctx.beginPath();
+				ctx.ellipse(-4, 0, 5, 2.4, 0.4, 0, TAU);
+				ctx.ellipse(4, 0, 5, 2.4, -0.4, 0, TAU);
+				ctx.fill();
+				ctx.restore();
+			}
+
+			function drawLight() {
+				const f = flame();
+				const radius = Math.max(w, h) * 0.55;
+				const glow = ctx.createRadialGradient(f.x, f.y, 8, f.x, f.y, radius);
+				glow.addColorStop(0, "rgba(255, 214, 130, 0.42)");
+				glow.addColorStop(0.28, "rgba(255, 150, 50, 0.16)");
+				glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+				ctx.fillStyle = glow;
+				ctx.fillRect(0, 0, w, h);
+
+				const shade = ctx.createRadialGradient(f.x, f.y, radius * 0.35, f.x, f.y, Math.max(w, h));
+				shade.addColorStop(0, "rgba(0, 0, 0, 0)");
+				shade.addColorStop(1, "rgba(0, 0, 0, 0.72)");
+				ctx.fillStyle = shade;
+				ctx.fillRect(0, 0, w, h);
+
+				ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
+				ctx.beginPath();
+				ctx.ellipse(lamp.x, lamp.y + 30, 58, 26, 0, 0, TAU);
+				ctx.fill();
+			}
+
+			function drawHand() {
+				ctx.save();
+				ctx.translate(hand.x, hand.y);
+				ctx.rotate(-0.4);
+				ctx.strokeStyle = "rgba(232, 214, 180, 0.75)";
+				ctx.lineWidth = 1.4;
+				ctx.beginPath();
+				ctx.moveTo(0, 16);
+				ctx.lineTo(0, 0);
+				ctx.lineTo(-7, -10);
+				ctx.moveTo(0, 0);
+				ctx.lineTo(2, -12);
+				ctx.moveTo(0, 2);
+				ctx.lineTo(8, -8);
+				ctx.stroke();
+				ctx.restore();
+			}
+
+			function hitLamp(x, y) {
+				return Math.hypot(x - lamp.x, y - (lamp.y - 16)) < 36;
+			}
+
+			function hitDecoy(x, y) {
+				for (const item of decoys) {
+					if (Math.hypot(x - item.x, y - item.y) < item.r) return item;
+				}
+				return null;
+			}
+
+			function frame(now) {
+				const dt = Math.min(0.033, (now - last) / 1000);
+				last = now;
+				time += dt;
+				if (spark > 0) spark -= dt;
+
+				drawRoom();
+				drawMoon();
+				drawCoin(decoys[0].x, decoys[0].y);
+				drawBook(decoys[1].x, decoys[1].y);
+				const vis = drawKey();
+				drawMoth();
+				drawLamp();
+				drawLight();
+				if (spark > 0) {
+					ctx.fillStyle = `rgba(255, 220, 140, ${spark})`;
+					ctx.beginPath();
+					ctx.arc(sparkX, sparkY, 10, 0, TAU);
+					ctx.fill();
+				}
+				drawHand();
+
+				if (vis > 0.85) {
+					seen += dt;
+					if (seen > 1.15 && !revealed) {
+						revealed = true;
+						caption.classList.add("is-on");
+					}
+				} else {
+					seen = 0;
+					if (revealed && vis < 0.2) {
+						revealed = false;
+						caption.classList.remove("is-on");
+					}
+				}
+				requestAnimationFrame(frame);
+			}
+
+			function setHand(event) {
+				const rect = canvas.getBoundingClientRect();
+				hand.x = event.clientX - rect.left;
+				hand.y = event.clientY - rect.top;
+				if (dragging) {
+					lamp.x = hand.x;
+					lamp.y = Math.max(h * 0.28, Math.min(h * 0.78, hand.y + 18));
+				}
+			}
+
+			canvas.addEventListener("pointerdown", (event) => {
+				setHand(event);
+				if (hitLamp(hand.x, hand.y)) {
+					dragging = true;
+					canvas.setPointerCapture(event.pointerId);
+					return;
+				}
+				const decoy = hitDecoy(hand.x, hand.y);
+				if (decoy && decoy.kind !== "moth") {
+					spark = 0.45;
+					sparkX = decoy.x;
+					sparkY = decoy.y;
+				}
+			});
+			canvas.addEventListener("pointermove", setHand);
+			canvas.addEventListener("pointerup", () => {
+				dragging = false;
+			});
+			window.addEventListener("keydown", (event) => {
+				const stepPx = 16;
+				if (event.key === "ArrowLeft") lamp.x -= stepPx;
+				if (event.key === "ArrowRight") lamp.x += stepPx;
+				if (event.key === "ArrowUp") lamp.y -= stepPx;
+				if (event.key === "ArrowDown") lamp.y += stepPx;
+			});
+			window.addEventListener("resize", resize);
+
+			resize();
+			requestAnimationFrame(frame);
+		</script>
+	</body>
+</html>

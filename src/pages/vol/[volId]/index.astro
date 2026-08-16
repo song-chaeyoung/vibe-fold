@@ -5,6 +5,7 @@ import SiteFooter from '../../../components/SiteFooter.astro';
 import ChapterRow from '../../../components/ChapterRow.astro';
 import {
 	formatVolLabel,
+	formatVolumeTitle,
 	getAllVolumes,
 	getVolumeByVolId,
 } from '../../../lib/content';
@@ -28,7 +29,7 @@ const summaryParagraphs = volume.summary.split(/\n\n+/).filter(Boolean);
 ---
 
 <BaseLayout
-	title={`${formatVolLabel(volume.number)} ${volume.title} · Vibe Fold`}
+	title={`${formatVolumeTitle(volume)} · Vibe Fold`}
 	description={volume.summary}
 	bodyClass="page-volume"
 >
@@ -38,7 +39,9 @@ const summaryParagraphs = volume.summary.split(/\n\n+/).filter(Boolean);
 				<SiteHeader />
 				<div class="volume-intro__copy">
 					<p class="volume-intro__vol">{formatVolLabel(volume.number)}</p>
-					<h1 class="volume-intro__title">{volume.title}</h1>
+					<h1 class="volume-intro__title">
+						{volume.example ? `${volume.title} (Example)` : volume.title}
+					</h1>
 					<div class="volume-intro__summary">
 						{summaryParagraphs.map((paragraph) => <p>{paragraph}</p>)}
 					</div>

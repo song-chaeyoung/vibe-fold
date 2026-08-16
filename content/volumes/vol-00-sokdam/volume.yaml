@@ -1,0 +1,17 @@
+id: vol-00-sokdam
+number: 0
+slug: sokdam
+title: 속담
+summary: |
+  짧은 말이 오래 남습니다.
+
+  속담을 인터랙티브 아트워크로 풀어 본 예시 볼륨입니다. 형식을 먼저 보고, Vol.1 설화에 참여하세요.
+date: 2026
+status: published
+featured: true
+example: true
+chapters:
+  - ch-01-gorae-ssaume-saeu
+  - ch-02-deungjan-miti-eodupda
+  - ch-03-mit-ppajin-doge-mul
+  - ch-04-sagongi-manheumyeon-baega

@@ -8,14 +8,14 @@ Vibe Fold chapters are **self-contained interactive artworks**. Contributors add
 
 ```bash
 cp -R content/_templates/chapter \
-  content/volumes/vol-05-nike/chapters/ch-04-my-piece
+  content/volumes/vol-01-seolhwa/chapters/ch-01-my-piece
 ```
 
 2. Edit `meta.yaml`:
-   - `order` — chapter number (unique within the volume)
    - `slug` — URL-safe kebab-case
    - `title`, `author`, `summary`, `thumb`
-   - Folder name should match `ch-{order}-{slug}`
+   - Folder name should match `ch-{suggested-number}-{slug}`
+   - Chapter order is **not** set here. An editor adds your folder name to that volume's `volume.yaml` `chapters:` list.
 
 3. Replace `index.html` (and assets) with your artwork.
 4. Replace `thumb.svg` / `thumb.jpg` (portrait ~3:4 works best).
@@ -35,7 +35,6 @@ Required files inside `content/volumes/<volume>/chapters/<chapter>/`:
 
 ```yaml
 id: ch-04-my-piece
-order: 4
 slug: my-piece
 title: My Piece
 author: your-handle   # @ is optional; UI adds it
@@ -43,6 +42,17 @@ summary: |
   Short description for the volume page and prev/next labels.
 thumb: thumb.svg
 ```
+
+Editors own chapter order in `volume.yaml`. The list is 1-based (`Ch.1`, `Ch.2`, …) and is the only source of truth:
+
+```yaml
+chapters:
+  - ch-01-first-piece
+  - ch-04-my-piece
+  - ch-02-another-piece
+```
+
+Folders listed here must exist. Folders that are not listed are ignored (useful for drafts). Reorder by moving lines.
 
 URL shape (generated automatically):
 
@@ -57,7 +67,7 @@ URL shape (generated automatically):
    - you cannot access the parent page
    - keep state in memory
 4. **Do not edit the shell header** — prev / logo / next is owned by the site. Your page should assume a small top overlay.
-5. **Volumes are editor-owned** — do not add `volume.yaml` / new volumes unless you are coordinating with an editor.
+5. **Volumes are editor-owned** — do not add `volume.yaml`, change the `chapters:` list, or create new volumes unless you are coordinating with an editor.
 
 ## Local preview
 
@@ -66,9 +76,10 @@ npm install
 npm run dev
 ```
 
-- Volume page: `/vol/5-nike`
-- Your chapter: `/vol/5-nike/ch/{order}-{slug}`
-- Raw iframe document: `/chapters/5-nike/{order}-{slug}/index.html`
+- Example volume: `/vol/0-sokdam`
+- Volume page: `/vol/1-seolhwa` (published volumes only)
+- Your chapter: `/vol/1-seolhwa/ch/{order}-{slug}`
+- Raw iframe document: `/chapters/1-seolhwa/{order}-{slug}/index.html`
 
 Chapter files under `content/volumes` are synced into `public/chapters` when Astro starts or builds.
 
