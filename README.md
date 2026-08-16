@@ -39,12 +39,12 @@ npm run preview
 content/
   _templates/                  # same shape as a volume; copy a chapter or the whole folder
     volume.yaml
-    ch-00-untitled/
+    ch-untitled/
   vol-01-seolhwa/              # Vol.1 설화 — open call, coming soon
     volume.yaml
   vol-00-sokdam/               # Vol.0 속담 — example volume
     volume.yaml
-    ch-01-gorae-ssaume-saeu/
+    ch-gorae-ssaume-saeu/
 ```
 
 Chapter order is the `chapters:` list in each `volume.yaml` (folder names, top to bottom). `volume.yaml` / chapter `meta.yaml` schemas and contribution rules: see [CONTRIBUTING.md](./CONTRIBUTING.md).

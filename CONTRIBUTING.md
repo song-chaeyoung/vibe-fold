@@ -7,14 +7,14 @@ Vibe Fold chapters are **self-contained interactive artworks**. Contributors add
 1. Copy the template:
 
 ```bash
-cp -R content/_templates/ch-00-untitled \
-  content/vol-01-seolhwa/ch-01-my-piece
+cp -R content/_templates/ch-untitled \
+  content/vol-01-seolhwa/ch-my-piece
 ```
 
 2. Edit `meta.yaml`:
    - `slug` — URL-safe kebab-case
    - `title`, `author`, `summary`, `thumb`
-   - Folder name should match `ch-{suggested-number}-{slug}`
+   - Folder name should match `ch-{slug}`
    - Chapter order is **not** set here. An editor adds your folder name to that volume's `volume.yaml` `chapters:` list.
 
 3. Replace `index.html` (and assets) with your artwork.
@@ -34,7 +34,7 @@ Required files inside `content/<volume>/<chapter>/`:
 `meta.yaml` fields:
 
 ```yaml
-id: ch-04-my-piece
+id: ch-my-piece
 slug: my-piece
 title: My Piece
 author: your-handle   # @ is optional; UI adds it
@@ -47,9 +47,9 @@ Editors own chapter order in `volume.yaml`. The list is 1-based (`Ch.1`, `Ch.2`,
 
 ```yaml
 chapters:
-  - ch-01-first-piece
-  - ch-04-my-piece
-  - ch-02-another-piece
+  - ch-first-piece
+  - ch-my-piece
+  - ch-another-piece
 ```
 
 Folders listed here must exist. Folders that are not listed are ignored (useful for drafts). Reorder by moving lines.
