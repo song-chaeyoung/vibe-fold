@@ -3,7 +3,7 @@ dist/
 # generated types
 .astro/
 
-# synced from content/volumes (see astro.config.mjs)
+# synced from content/ (see astro.config.mjs)
 public/chapters/
 public/volumes/
 

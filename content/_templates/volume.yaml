@@ -1,0 +1,11 @@
+id: vol-00-untitled
+number: 0
+slug: untitled
+title: Untitled
+summary: |
+  One or two short paragraphs describing this volume.
+date: 2026
+status: coming_soon
+featured: false
+chapters:
+  - ch-00-untitled

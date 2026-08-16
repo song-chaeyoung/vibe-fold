@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
-const volumesDir = join(root, 'content/volumes');
+const volumesDir = join(root, 'content');
 const publicChaptersDir = join(root, 'public/chapters');
 
 /**
@@ -19,7 +19,7 @@ function syncContentToPublic() {
 	mkdirSync(publicChaptersDir, { recursive: true });
 
 	for (const entry of readdirSync(volumesDir, { withFileTypes: true })) {
-		if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+		if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
 
 		const volumePath = join(volumesDir, entry.name);
 		const volumeYamlPath = join(volumePath, 'volume.yaml');
@@ -28,12 +28,11 @@ function syncContentToPublic() {
 		const volume = parseYaml(readFileSync(volumeYamlPath, 'utf8'));
 		const volId = `${volume.number}-${volume.slug}`;
 
-		const chaptersDir = join(volumePath, 'chapters');
 		const chapterDirs = Array.isArray(volume.chapters) ? volume.chapters : [];
-		if (!existsSync(chaptersDir) || chapterDirs.length === 0) continue;
+		if (chapterDirs.length === 0) continue;
 
 		chapterDirs.forEach((dirName, index) => {
-			const chapterPath = join(chaptersDir, dirName);
+			const chapterPath = join(volumePath, dirName);
 			const metaPath = join(chapterPath, 'meta.yaml');
 			const indexPath = join(chapterPath, 'index.html');
 			if (!existsSync(metaPath) || !existsSync(indexPath)) {
@@ -63,7 +62,7 @@ function contentSyncIntegration() {
 				syncContentToPublic();
 				server.watcher.add(volumesDir);
 				server.watcher.on('all', (_event, filePath) => {
-					if (typeof filePath === 'string' && filePath.includes(`${join('content', 'volumes')}`)) {
+					if (typeof filePath === 'string' && filePath.startsWith(volumesDir)) {
 						syncContentToPublic();
 					}
 				});

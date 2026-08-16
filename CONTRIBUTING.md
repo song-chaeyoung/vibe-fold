@@ -7,8 +7,8 @@ Vibe Fold chapters are **self-contained interactive artworks**. Contributors add
 1. Copy the template:
 
 ```bash
-cp -R content/_templates/chapter \
-  content/volumes/vol-01-seolhwa/chapters/ch-01-my-piece
+cp -R content/_templates/ch-00-untitled \
+  content/vol-01-seolhwa/ch-01-my-piece
 ```
 
 2. Edit `meta.yaml`:
@@ -23,7 +23,7 @@ cp -R content/_templates/chapter \
 
 ## Chapter contract
 
-Required files inside `content/volumes/<volume>/chapters/<chapter>/`:
+Required files inside `content/<volume>/<chapter>/`:
 
 | File | Purpose |
 |------|---------|
@@ -67,7 +67,7 @@ URL shape (generated automatically):
    - you cannot access the parent page
    - keep state in memory
 4. **Do not edit the shell header** — prev / logo / next is owned by the site. Your page should assume a small top overlay.
-5. **Volumes are editor-owned** — do not add `volume.yaml`, change the `chapters:` list, or create new volumes unless you are coordinating with an editor.
+5. **Volumes are editor-owned** — do not add `volume.yaml`, change the `chapters:` list, or create new volumes unless you are coordinating with an editor. Editors start a volume with `cp -R content/_templates content/vol-02-my-volume`.
 
 ## Local preview
 
@@ -81,7 +81,7 @@ npm run dev
 - Your chapter: `/vol/1-seolhwa/ch/{order}-{slug}`
 - Raw iframe document: `/chapters/1-seolhwa/{order}-{slug}/index.html`
 
-Chapter files under `content/volumes` are synced into `public/chapters` when Astro starts or builds.
+Chapter files under `content/` are synced into `public/chapters` when Astro starts or builds.
 
 ## Review checklist
 

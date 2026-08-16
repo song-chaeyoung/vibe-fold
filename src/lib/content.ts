@@ -45,7 +45,7 @@ export interface Volume extends VolumeMeta {
 	chapters: Chapter[];
 }
 
-const volumesRoot = join(process.cwd(), 'content/volumes');
+const volumesRoot = join(process.cwd(), 'content');
 
 function loadYaml<T>(path: string): T {
 	return parseYaml(readFileSync(path, 'utf8')) as T;
@@ -77,11 +77,10 @@ function listedChapterDirs(volumeDir: string, chapterDirs: string[] | undefined)
 }
 
 function loadChapters(volumeDir: string, volId: string, chapterDirs: string[]): Chapter[] {
-	const chaptersDir = join(volumeDir, 'chapters');
-	if (!existsSync(chaptersDir) || chapterDirs.length === 0) return [];
+	if (chapterDirs.length === 0) return [];
 
 	return chapterDirs.map((dirName, index) => {
-		const chapterPath = join(chaptersDir, dirName);
+		const chapterPath = join(volumeDir, dirName);
 		const metaPath = join(chapterPath, 'meta.yaml');
 		const indexPath = join(chapterPath, 'index.html');
 		if (!existsSync(metaPath) || !existsSync(indexPath)) {
