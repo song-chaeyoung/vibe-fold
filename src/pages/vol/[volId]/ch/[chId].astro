@@ -35,7 +35,7 @@ if (!current) {
 const pageTitle = `${formatChapterLabel(current.order, current.title)} · ${formatVolLabel(volume.number)} ${volume.title}`;
 ---
 
-<BaseLayout title={`${pageTitle} · Vibe Magazine`} description={current.summary} bodyClass="page-chapter">
+<BaseLayout title={`${pageTitle} · Vibe Fold`} description={current.summary} bodyClass="page-chapter">
 	<ChapterChrome volume={volume} prev={prev} next={next} />
 
 	<main class="chapter-stage">

@@ -1,6 +1,6 @@
 # Contributing a chapter
 
-Vibe Magazine chapters are **self-contained interactive artworks**. Contributors add a folder via GitHub pull request. The site shell (home, volume pages, prev/next chrome) is maintained by editors — you only touch your chapter directory.
+Vibe Fold chapters are **self-contained interactive artworks**. Contributors add a folder via GitHub pull request. The site shell (home, volume pages, prev/next chrome) is maintained by editors — you only touch your chapter directory.
 
 ## Quick start
 

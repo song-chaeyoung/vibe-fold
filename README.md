@@ -1,6 +1,6 @@
-# Vibe Magazine
+# Vibe Fold
 
-Visual magazine for [Vibe Coding Club](https://vibecodingclub.kr/).  
+Interactive visual stories for [Vibe Coding Club](https://vibecodingclub.kr/).  
 Site shell is Astro; each chapter is an independent interactive artwork loaded in a sandboxed iframe.
 
 **Production host:** `https://fold.vibecodingclub.kr`
