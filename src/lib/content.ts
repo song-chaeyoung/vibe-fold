@@ -23,6 +23,10 @@ export interface ChapterMeta {
 	author: string;
 	summary: string;
 	thumb: string;
+	/** Optional 1200x630 share card, relative to the chapter folder. */
+	shareImage?: string;
+	/** Optional favicon for this chapter's page, relative to the chapter folder. */
+	favicon?: string;
 }
 
 export interface Chapter extends ChapterMeta {
@@ -32,6 +36,8 @@ export interface Chapter extends ChapterMeta {
 	dirName: string;
 	iframeSrc: string;
 	thumbSrc: string;
+	shareImageSrc?: string;
+	faviconSrc?: string;
 }
 
 interface VolumeYaml extends VolumeMeta {
@@ -93,14 +99,18 @@ function loadChapters(volumeDir: string, volId: string, chapterDirs: string[]): 
 		const order = index + 1;
 		const chId = toChId(order, meta.slug);
 
+		const asset = (file: string) => `/chapters/${volId}/${chId}/${file}`;
+
 		return {
 			...meta,
 			order,
 			volId,
 			chId,
 			dirName,
-			iframeSrc: `/chapters/${volId}/${chId}/index.html`,
-			thumbSrc: `/chapters/${volId}/${chId}/${meta.thumb}`,
+			iframeSrc: asset('index.html'),
+			thumbSrc: asset(meta.thumb),
+			shareImageSrc: meta.shareImage ? asset(meta.shareImage) : undefined,
+			faviconSrc: meta.favicon ? asset(meta.favicon) : undefined,
 		};
 	});
 }

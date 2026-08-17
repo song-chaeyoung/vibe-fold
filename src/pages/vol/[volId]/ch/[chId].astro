@@ -35,7 +35,15 @@ if (!current) {
 const pageTitle = `${formatChapterLabel(current.order, current.title)} · ${formatVolumeTitle(volume)}`;
 ---
 
-<BaseLayout title={`${pageTitle} · Vibe Fold`} description={current.summary} bodyClass="page-chapter">
+<BaseLayout
+	title={`${pageTitle} · Vibe Fold`}
+	description={current.summary}
+	bodyClass="page-chapter"
+	image={current.shareImageSrc}
+	icon={current.faviconSrc}
+	type="article"
+	themeColor="#000000"
+>
 	<ChapterChrome volume={volume} prev={prev} next={next} />
 
 	<main class="chapter-stage">
