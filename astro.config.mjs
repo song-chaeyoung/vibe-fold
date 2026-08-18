@@ -74,8 +74,42 @@ function contentSyncIntegration() {
 	};
 }
 
+/**
+ * Chapters run in `<iframe sandbox="allow-scripts">`, which gives them an opaque
+ * origin. Every asset they request therefore arrives as `Sec-Fetch-Site: cross-site`
+ * with `Origin: null`, and the dev server's sec-fetch guard answers 403 — so
+ * sprites, fonts and data files silently vanish during `astro dev` while working
+ * perfectly in the static build.
+ *
+ * Dev only, and scoped to /chapters/ — the guard still covers every other route.
+ */
+function allowSandboxedChapterAssets() {
+	return {
+		name: 'vibe-allow-sandboxed-chapters',
+		configureServer(server) {
+			// Returning a function defers to after Astro has installed its own
+			// middleware; unshifting then puts us genuinely first, which plugin
+			// ordering alone does not guarantee.
+			return () => {
+				server.middlewares.stack.unshift({
+					route: '',
+					handle: (req, _res, next) => {
+						if (req.url && req.url.startsWith('/chapters/')) {
+							delete req.headers['sec-fetch-site'];
+						}
+						next();
+					},
+				});
+			};
+		},
+	};
+}
+
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://fold.vibecodingclub.kr',
 	integrations: [contentSyncIntegration()],
+	vite: {
+		plugins: [allowSandboxedChapterAssets()],
+	},
 });
