@@ -9,8 +9,8 @@ interface Props {
 
 const { volume, chapter } = Astro.props;
 const href = chapterHref(volume.volId, chapter.chId);
-const author = chapter.author.startsWith('@') ? chapter.author : `@${chapter.author}`;
-const summaryParagraphs = chapter.summary.split(/\n\n+/).filter(Boolean);
+const author = chapter.creator.startsWith('@') ? chapter.creator : `@${chapter.creator}`;
+const summaryParagraphs = chapter.description.split(/\n\n+/).filter(Boolean);
 ---
 
 <a class="chapter-row" href={href}>

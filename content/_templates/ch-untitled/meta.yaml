@@ -1,8 +1,8 @@
 id: ch-untitled
 slug: untitled
 title: Untitled
-author: your-handle
-summary: |
+creator: your-handle
+description: |
   One or two short paragraphs describing your interactive artwork.
   Keep this text for the volume grid and prev/next chrome.
-thumb: thumb.svg
+thumbnail: thumb.svg

@@ -20,13 +20,18 @@ export interface ChapterMeta {
 	id: string;
 	slug: string;
 	title: string;
-	author: string;
-	summary: string;
-	thumb: string;
+	creator: string;
+	description: string;
+	thumbnail: string;
 	/** Optional 1200x630 share card, relative to the chapter folder. */
 	shareImage?: string;
 	/** Optional favicon for this chapter's page, relative to the chapter folder. */
 	favicon?: string;
+	links?: {
+		github?: string;
+		website?: string;
+		instagram?: string;
+	};
 }
 
 export interface Chapter extends ChapterMeta {
@@ -108,7 +113,7 @@ function loadChapters(volumeDir: string, volId: string, chapterDirs: string[]): 
 			chId,
 			dirName,
 			iframeSrc: asset('index.html'),
-			thumbSrc: asset(meta.thumb),
+			thumbSrc: asset(meta.thumbnail),
 			shareImageSrc: meta.shareImage ? asset(meta.shareImage) : undefined,
 			faviconSrc: meta.favicon ? asset(meta.favicon) : undefined,
 		};
